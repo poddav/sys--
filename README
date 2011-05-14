@@ -1,0 +1,52 @@
+Library of C++ wrappers for low-level system functions.
+
+Following headers put declarations into the 'sys' namespace:
+
+sysstring.h	Forward declaration of 'string' class (either std::string or
+		ext::string).  Multibyte/wide string conversions.
+sysstring.cc
+syserror.h	System error exception classes.
+syserror.cc
+sysenv.h	System environment manipulation.
+sysfs.h		Filesystem manipulation.
+sysfs.cc
+syshandle.h	Generic class that wraps access to system 'handle' objects.
+sysio.h		Wrappers for low level system I/O.
+sysio.cc
+sysdll.h	Interface for dynamic-loading libraries.
+sysatomic.h	Atomic exchange/add inline functions.
+sysmemmap.h	Interface for memory mapped files.
+sysmmdetail.h
+sysmemmap.cc
+fstream.hpp	C++ streams interface to low level system I/O.
+fstream.cc
+
+Following headers are Windows-only (still using 'sys' namespace):
+
+winmem.hpp	Windows memory management (GlobalAlloc and friends).
+clipboard.hpp	Windows clipboard access interface.
+registry.hpp	Windows registry access interface.
+registry.tcc
+timer.hpp	High-performance system timer (non-win32 version uses
+timer.cc	boost::timer instead).
+
+Following headers put declarations into the 'bin' namespace:
+
+bindata.h	byte-swapping inline functions for endianness handling.
+binio.h		inline functions for binary I/O.
+
+Following header puts declarations into the 'icase' namespace:
+
+icase.h		case insensitive string comparison functors.
+
+Following headers put declarations into global namespace:
+
+refcount_ptr.h	reference counting pointer implementation.
+lstring.h	light_string and short_string -- light-weight string classes.
+
+Sys++ wrappers use the following boost libraries and headers:
+
+cstdint.hpp		for intXX_t platform-independent types.
+static_assert.hpp	for compile-time assertions.
+scoped_array.hpp	for dynamically allocated buffers.
+operators.hpp		for overloaded operators.
