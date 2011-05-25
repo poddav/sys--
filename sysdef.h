@@ -1,10 +1,8 @@
-/* -*- C++ -*-
- * File:        sysdef.h
- * Created:     Mon Nov 01 01:12:02 2010
- * Description: compiler-dependent macro definitions.
- *
- * $Id$
- */
+// -*- C++ -*-
+//! \file       sysdef.h
+//! \date       Mon Nov 01 01:12:02 2010
+//! \brief      compiler-dependent macro definitions.
+//
 
 #ifndef SYSDEF_H
 #define SYSDEF_H
