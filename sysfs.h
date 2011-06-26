@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef SYSFS_H
-#define SYSFS_H
+#ifndef SYSPP_SYSFS_H
+#define SYSPP_SYSFS_H
 
 #include "syserror.h"
 #include "sysstring.h"
@@ -44,6 +44,8 @@
 namespace sys {
 
 // --- filysystem manipulation -----------------------------------------------
+
+/// sys::chdir (DIRECTORY)
 
 inline bool chdir (const char* dir)
 {
@@ -73,6 +75,8 @@ inline bool chdir (const basic_string<Ch,Tr,Al>& dir)
     return sys::chdir (dir.c_str());
 }
 
+/// sys::mkdir (DIRECTORY)
+
 inline bool mkdir (const char* dir)
 {
 #ifdef _WIN32
@@ -100,6 +104,8 @@ inline bool mkdir (const basic_string<Ch,Tr,Al>& dir)
 {
     return sys::mkdir (dir.c_str());
 }
+
+/// sys::rmdir (DIRECTORY)
 
 inline bool rmdir (const char* dir)
 {
@@ -129,6 +135,8 @@ inline bool rmdir (const basic_string<Ch,Tr,Al>& dir)
     return rmdir (dir.c_str());
 }
 
+/// sys::getcwd (BUFFER, BUFFER_SIZE)
+
 inline bool getcwd (char* buf, size_t buf_size)
 {
 #ifdef _WIN32
@@ -155,7 +163,7 @@ inline bool getcwd (wchar_t* buf, size_t buf_size)
 #endif
 }
 
-// getcwd (DST)
+// sys::getcwd (DST)
 // Effects: puts current working directory into DST.
 // Returns: TRUE on success, FALSE otherwise.
 //          DST will contain empty string on error.
@@ -163,7 +171,7 @@ inline bool getcwd (wchar_t* buf, size_t buf_size)
 template <typename char_type>
 bool getcwd (basic_string<char_type>& cwd);
 
-// create_path (PATH)
+// sys::create_path (PATH)
 // Effects: create all directories within PATH if they dont already exist.
 // Returns: TRUE if path was successfully created or already existed,
 //          FALSE otherwise.
@@ -191,6 +199,8 @@ typedef off_t		size_type;
 #endif
 
 const size_type invalid_size = size_type (-1);
+
+/// sys::file::exists (FILENAME)
 
 inline bool exists (const char* name)
 {
@@ -221,6 +231,8 @@ inline bool exists (const basic_string<Ch,Tr,Al>& name)
     return exists (name.c_str());
 }
 
+/// sys::file::unlink (FILENAME)
+
 inline bool unlink (const char* name)
 {
 #ifdef _WIN32
@@ -247,6 +259,39 @@ template <typename Ch, typename Tr, typename Al>
 inline bool unlink (const basic_string<Ch,Tr,Al>& name)
 {
     return unlink (name.c_str());
+}
+
+/// sys::file::rename (OLDNAME, NEWNAME)
+
+inline bool rename (const char* oldname, const char* newname)
+{
+#ifdef _WIN32
+    return ::MoveFileA (oldname, newname);
+#else
+    return ::rename (oldname, newname) != -1;
+#endif
+}
+
+#ifdef _WIN32
+inline bool rename (const wchar_t* oldname, const wchar_t* newname)
+{
+    return ::MoveFileW (oldname, newname);
+}
+#else
+inline bool rename (const basic_string<wchar_t>& oldname,
+		    const basic_string<wchar_t>& newname)
+{
+    string oname, nname;
+    return wcstombs (oldname, oname) && wcstombs (newname, nname)
+    	&& rename (oname.c_str(), nname.c_str());
+}
+#endif
+
+template <typename Ch, typename Tr, typename Al>
+inline bool rename (const basic_string<Ch,Tr,Al>& oldname,
+		    const basic_string<Ch,Tr,Al>& newname)
+{
+    return rename (oldname.c_str(), newname.c_str());
 }
 
 // --- file time -------------------------------------------------------------
@@ -277,7 +322,7 @@ private:
     ftime_type		m_time;
 };
 
-// get_mod_time
+// sys::file::get_mod_time
 // Returns: last modification time of file identified by name.
 // Throws: sys::file_error if modification time cannot be accessed.
 
@@ -321,7 +366,7 @@ inline time get_mod_time (const basic_string<Ch,Tr,Al>& name)
 
 // --- file size -------------------------------------------------------------
 
-// get_size
+// sys::file::get_size
 // Returns: size of file identified by either handle or name.  In case of error,
 // sys::file::invalid_size is returned.
 
@@ -452,4 +497,4 @@ bool getcwd (basic_string<wchar_t>& cwd)
 
 } // namespace sys
 
-#endif /* SYSFS_H */
+#endif /* SYSPP_SYSFS_H */
