@@ -36,7 +36,12 @@ namespace sys {
 template <typename CharT, typename Traits = std::char_traits<CharT> >
 class basic_memory_buf;
 
-typedef basic_memory_buf<char> memory_buf;
+template <typename CharT, typename Traits = std::char_traits<CharT>,
+	  typename Alloc = std::allocator<CharT> >
+class dynamic_memory_buf;
+
+typedef basic_memory_buf<char>	    memory_buf;
+typedef dynamic_memory_buf<char>    dynamic_buf;
 
 // ---------------------------------------------------------------------------
 /// \class basic_memory_buf
@@ -55,7 +60,9 @@ public: // types
 
 public: // methods
 
-    basic_memory_buf () : m_mode (0) { }
+    explicit basic_memory_buf (std::ios::openmode mode)
+       	: m_mode (mode)
+	{ }
     basic_memory_buf (const char_type* in, size_type sz, std::ios::openmode mode)
 	: m_mode (mode)
 	{ this->setbuf (const_cast<char_type*> (in), sz); }
@@ -108,16 +115,79 @@ private: // methods
     // m_seek (OFFSET, WAY)
     off_type m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode);
 
-private: // data
+protected: // data
 
     std::ios::openmode		m_mode;
+};
+
+// ---------------------------------------------------------------------------
+/// \class dynamic_memory_buf
+/// \brief Stream buffer on top of the character sequence
+//         with dynamic memory management.
+
+template <typename CharT, typename Traits, typename Alloc>
+class dynamic_memory_buf : public basic_memory_buf<CharT, Traits>
+		         , private Alloc
+{
+public: // types
+
+    typedef basic_memory_buf<CharT, Traits>	base_type;
+    typedef CharT				char_type;
+    typedef Traits				traits_type;
+    typedef Alloc				allocator_type;
+    typedef typename traits_type::int_type 	int_type;
+    typedef typename traits_type::pos_type 	pos_type;
+    typedef typename traits_type::off_type	off_type;
+    typedef typename base_type::size_type	size_type;
+
+public: // methods
+
+    explicit dynamic_memory_buf (std::ios::openmode mode = 0)
+       	: base_type (mode), m_allocated (false)
+      	{}
+    dynamic_memory_buf (const char_type* in, size_type sz, std::ios::openmode mode)
+	: base_type (mode), m_allocated (false)
+	{ this->setbuf (const_cast<char_type*> (in), sz); }
+    template <size_t N>
+    dynamic_memory_buf (const char_type (&ary)[N], std::ios::openmode mode)
+	: base_type (mode), m_allocated (false)
+	{ this->setbuf (const_cast<char_type*> (ary), N); }
+
+    allocator_type get_allocator () const
+       	{ return static_cast<allocator_type> (*this); }
+
+protected: // virtual methods
+
+    int_type overflow (int_type c);
+    std::streamsize xsputn (const char_type* buf, std::streamsize size);
+
+    std::streambuf* setbuf (char_type* s, std::streamsize n)
+	{
+	    if (m_allocated)
+	    {
+		this->deallocate (this->eback(), this->epptr() - this->eback());
+		m_allocated = false;
+	    }
+	    return base_type::setbuf (s, n);
+       	}
+
+private: // methods
+
+    // m_grow (NEW_SIZE)
+    void m_grow (size_type new_size);
+
+protected: // data
+
+    enum { GROW_SIZE = 1024 };
+
+    bool			m_allocated;
 };
 
 // ---------------------------------------------------------------------------
 /// \class mapped_buf
 /// \brief stream buffer on top of the memory mapped file.
 
-class mapped_buf : public std::streambuf
+class DLLIMPORT mapped_buf : public std::streambuf
 {
 public: // types
 
@@ -227,26 +297,27 @@ typename basic_memory_buf<C,T>::off_type basic_memory_buf<C,T>::
 m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode mode)
 {
     off_type result = static_cast<off_type> (-1);
-    if (mode & std::ios::in && this->eback())
+    if (mode & std::ios::in)
     {
+	off_type goffset = offset;
 	off_type seq_size = this->egptr() - this->eback();
 	if (way == std::ios::cur)
 	{
 	    off_type cur_pos = this->gptr() - this->eback();
-	    if (!offset)
+	    if (!goffset)
 		return cur_pos;
-	    offset += cur_pos;
+	    goffset += cur_pos;
 	}
 	else if (way == std::ios::end)
-	    offset += seq_size;
-	if (offset < 0)
-	    offset = 0;
-	else if (offset > seq_size)
-	    offset = seq_size;
-	setg (this->eback(), this->eback() + offset, this->egptr());
-	result = offset;
+	    goffset += seq_size;
+	if (goffset < 0)
+	    goffset = 0;
+	else if (goffset > seq_size)
+	    goffset = seq_size;
+	setg (this->eback(), this->eback() + goffset, this->egptr());
+	result = goffset;
     }
-    if (mode & std::ios::out && this->pbase())
+    if (mode & std::ios::out)
     {
 	off_type seq_size = this->epptr() - this->pbase();
 	if (way == std::ios::cur)
@@ -267,6 +338,58 @@ m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode mode)
 	result = offset;
     }
     return result;
+}
+
+// ---------------------------------------------------------------------------
+
+template <typename Ch, typename Tr, typename Al>
+void dynamic_memory_buf<Ch,Tr,Al>::
+m_grow (size_type new_size)
+{
+    off_type putpos = this->poffset();
+    off_type getpos = this->goffset();
+    char_type* new_buf = this->allocate (new_size);
+    traits_type::copy (new_buf, this->eback(), this->epptr() - this->eback());
+    this->setbuf (new_buf, new_size);
+    m_allocated = true;
+    if (this->m_mode & std::ios::in)
+	gbump (getpos);
+    if (this->m_mode & std::ios::out)
+	pbump (putpos);
+}
+
+template <typename Ch, typename Tr, typename Al>
+typename dynamic_memory_buf<Ch,Tr,Al>::int_type dynamic_memory_buf<Ch,Tr,Al>::
+overflow (int_type c)
+{
+    if (traits_type::eq_int_type (c, traits_type::eof()))
+	return traits_type::not_eof (c);
+    if (!(this->m_mode & std::ios::out))
+	return traits_type::eof();
+
+    if (this->pptr() == this->epptr())
+	m_grow (this->psize() + GROW_SIZE);
+
+    *this->pptr() = traits_type::to_char_type (c);
+    this->pbump (1);
+
+    return (c);
+}
+
+template <typename Ch, typename Tr, typename Al>
+std::streamsize dynamic_memory_buf<Ch,Tr,Al>::
+xsputn (const char_type* buf, std::streamsize size)
+{
+    if (!(this->m_mode & std::ios::out))
+	return 0;
+    if (size > static_cast<std::streamsize> (this->epptr() - this->pptr()))
+    {
+	size_type cur_size = this->epptr() - this->pbase();
+	m_grow (std::max<size_type> (cur_size + GROW_SIZE, this->psize() + size));
+    }
+    traits_type::copy (this->pptr(), buf, size);
+    this->pbump (size);
+    return size;
 }
 
 // ---------------------------------------------------------------------------
