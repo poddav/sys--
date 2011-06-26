@@ -58,6 +58,34 @@ size_t read_file (raw_handle file, char* buf, size_t size);
 std::streamoff seek_file (raw_handle file, std::streamoff off, std::ios::seekdir dir);
 
 namespace io {
+
+    inline raw_handle in ()
+    {
+#ifdef _WIN32
+	return ::GetStdHandle (STD_INPUT_HANDLE);
+#else
+	return STDIN_FILENO;
+#endif
+    }
+
+    inline raw_handle out ()
+    {
+#ifdef _WIN32
+	return ::GetStdHandle (STD_OUTPUT_HANDLE);
+#else
+	return STDOUT_FILENO;
+#endif
+    }
+
+    inline raw_handle err ()
+    {
+#ifdef _WIN32
+	return ::GetStdHandle (STD_ERROR_HANDLE);
+#else
+	return STDERR_FILENO;
+#endif
+    }
+
     // namespace for i/o mode constants and mode conversion functions
 
     enum win_iomode {
@@ -262,6 +290,17 @@ namespace io {
 } // namespace io
 
 // --------------------------------------------------------------------------
+
+// isatty (HANDLE)
+
+inline bool isatty (raw_handle handle)
+{
+#ifdef _WIN32
+    return ::GetFileType (handle) == FILE_TYPE_CHAR;
+#else
+    return ::isatty (handle);
+#endif
+}
 
 template <typename CharT> raw_handle
 create_file (const CharT* filename, io::sys_mode mode,
