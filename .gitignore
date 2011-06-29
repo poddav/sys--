@@ -5,7 +5,8 @@
 *.asm
 *.lib
 *.exe
-test*
+*test*
+text*
 vc10
 Build
 doc
