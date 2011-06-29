@@ -24,9 +24,10 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef SYS_WINMEM_HPP
-#define SYS_WINMEM_HPP
+#ifndef WINMEM_HPP
+#define WINMEM_HPP
 
+#include <cstddef>	// for std::size_t
 #include <windows.h>
 
 namespace sys { namespace mem {
@@ -39,19 +40,21 @@ using std::size_t;
 class global
 {
 public:
+    explicit global (HGLOBAL handle) : m_handle (handle) {}
     global (unsigned flags, size_t bytes) : m_handle (::GlobalAlloc (flags, bytes))
-       	{ if (!m_handle) throw sys::generic_error(); }
+       	{ if (!m_handle) throw std::bad_alloc(); }
 
     ~global () { if (m_handle) ::GlobalFree (m_handle); }
 
     HGLOBAL handle () const { return m_handle; }
+    size_t size () const { return ::GlobalSize (m_handle); }
     unsigned flags () const { return ::GlobalFlags (m_handle); }
     unsigned lock_count () const { return ::GlobalFlags (m_handle) & GMEM_LOCKCOUNT; }
 
     void realloc (size_t bytes, unsigned flags)
 	{
 	    HGLOBAL hmem = ::GlobalReAlloc (m_handle, bytes, flags);
-	    if (!hmem) throw sys::generic_error();
+	    if (!hmem) throw std::bad_alloc();
 	    m_handle = hmem;
 	}
 
@@ -67,24 +70,80 @@ private:
     HGLOBAL	m_handle;
 };
 
+/// \class sys::mem::local
+/// \brief wrapper for memory managed by LocalAlloc/LocalFree system calls.
+
+class local
+{
+public:
+    explicit local (HLOCAL handle) : m_handle (handle) {}
+    local (unsigned flags, size_t bytes) : m_handle (::LocalAlloc (flags, bytes))
+	{ if (!m_handle) throw std::bad_alloc(); }
+
+    ~local () { if (m_handle) ::LocalFree (m_handle); }
+
+    HLOCAL handle () const { return m_handle; }
+    size_t size () const { return ::LocalSize (m_handle); }
+    unsigned flags () const { return ::LocalFlags (m_handle); }
+    unsigned lock_count () const { return ::LocalFlags (m_handle) & LMEM_LOCKCOUNT; }
+
+    void realloc (size_t bytes, unsigned flags)
+	{
+	    HLOCAL hmem = ::LocalReAlloc (m_handle, bytes, flags);
+	    if (!hmem) throw std::bad_alloc();
+	    m_handle = hmem;
+	}
+
+    HLOCAL release ()
+	{
+	    HLOCAL hmem = m_handle;
+	    m_handle = 0;
+	    return hmem;
+	}
+
+private:
+
+    HLOCAL	m_handle;
+};
+
+namespace detail {
+
+template <class mem_type> class lock {};
+
+template <> class lock<global>
+{
+public:
+    static void* Lock   (HANDLE hmem) { return ::GlobalLock (hmem); }
+    static bool  Unlock (HANDLE hmem) { return ::GlobalUnlock (hmem); }
+};
+
+template <> class lock<local>
+{
+public:
+    static void* Lock   (HANDLE hmem) { return ::LocalLock (hmem); }
+    static bool  Unlock (HANDLE hmem) { return ::LocalUnlock (hmem); }
+};
+
+} // namespace detail
+
 /// \class sys::mem::lock
 /// \brief wrapper for locks over sys::mem::global objects.
 
-template <typename T>
-class lock
+template <typename T, class mem_type = global>
+class lock : private detail::lock<mem_type>
 {
 public:
-    explicit lock (global& gmem)
-	: m_handle (gmem.handle())
-       	, m_ptr (static_cast<T*> (::GlobalLock (m_handle)))
+    explicit lock (mem_type& hmem)
+	: m_handle (hmem.handle())
+       	, m_ptr (static_cast<T*> (this->Lock (m_handle)))
 	{ if (!m_ptr) throw sys::generic_error(); }
 
-    explicit lock (HGLOBAL gmem)
-	: m_handle (gmem)
-       	, m_ptr (static_cast<T*> (::GlobalLock (m_handle)))
+    explicit lock (HANDLE hmem)
+	: m_handle (hmem)
+       	, m_ptr (static_cast<T*> (this->Lock (m_handle)))
 	{ if (!m_ptr) throw sys::generic_error(); }
 
-    ~lock () { ::GlobalUnlock (m_handle); }
+    ~lock () { this->Unlock (m_handle); }
 
     T* get () const         { return m_ptr; }
 
@@ -93,21 +152,10 @@ public:
     T& operator[] (unsigned index) const { return m_ptr[index]; }
 
 private:
-    HGLOBAL	m_handle;
+    HANDLE	m_handle;
     T*		m_ptr;
-};
-
-/// \class sys::mem::local_free_on_leave
-/// \brief RAII wrapper for the handle obtained through GlobalAlloc.
-
-struct local_free_on_leave
-{
-    local_free_on_leave (void *p) : m_ptr (p) { }
-    ~local_free_on_leave () { ::LocalFree (m_ptr); }
-private:
-    void *m_ptr;
 };
 
 } } // namespace sys::mem
 
-#endif /* SYS_WINMEM_HPP */
+#endif /* WINMEM_HPP */
