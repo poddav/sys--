@@ -28,7 +28,7 @@
 #ifndef _WIN32
 #include <cstring>	// for std::strerror
 #else
-#include "winmem.hpp"	// for local_free_on_leave
+#include "winmem.hpp"	// for sys::mem::local
 #endif
 
 namespace sys {
@@ -49,7 +49,7 @@ set_system_message ()
 			     NULL, m_error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			     (LPTSTR) &msg_buf, 0, NULL))
 	{
-	    sys::mem::local_free_on_leave sentry ((void*)msg_buf);
+	    sys::mem::local sentry (msg_buf);
 	    size_t len = std::char_traits<TCHAR>::length (msg_buf);
 	    std::locale loc;
 	    while (len && std::isspace (msg_buf[len - 1], loc))
