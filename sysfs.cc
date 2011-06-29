@@ -28,43 +28,16 @@
 
 namespace sys {
 
-#if 0
-string getcwd ()
-{
-    local_buffer<char> buf;
-#ifdef _WIN32
-    size_t ret = ::GetCurrentDirectoryA (buf.get(), buf.size());
-    if (ret <= buf.size())
-	return buf.get();
-
-    buf.reserve (ret);
-    if (::GetCurrentDirectoryA (buf.get(), buf.size()))
-	return buf.get();
-#else
-    if (::getcwd (buf.get(), buf.size()))
-	return buf.get();
-
-    if (errno == ERANGE)
-    {
-	buf.reserve (1024);
-	if (::getcwd (buf.get(), buf.size()))
-	    return buf.get();
-    }
-#endif
-    return string();
-}
-#endif
-
 #ifndef _WIN32
 
 namespace detail {
 
-bool wgetcwd (wchar_t* buf, size_t buf_size)
+bool wgetcwd (UChar* buf, size_t buf_size)
 {
     if (!buf_size)
 	return false;
 
-    local_buffer<char> cwd (buf_size * MB_LEN_MAX);
+    local_buffer<char> cwd (buf_size * detail::mb_len_max());
     if (!::getcwd (cwd.get(), cwd.size()))
 	return false;
 
@@ -75,7 +48,7 @@ bool wgetcwd (wchar_t* buf, size_t buf_size)
     if (wcwd.size() >= buf_size)
 	return false;
 
-    ::wmemcpy (buf, wcwd.c_str(), wcwd.size()+1);
+    std::char_traits<UChar>::copy (buf, wcwd.c_str(), wcwd.size()+1);
     return true;
 }
 

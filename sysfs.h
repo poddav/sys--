@@ -34,6 +34,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -43,7 +44,7 @@
 
 namespace sys {
 
-// --- filysystem manipulation -----------------------------------------------
+// --- filesystem manipulation -----------------------------------------------
 
 /// sys::chdir (DIRECTORY)
 
@@ -62,7 +63,7 @@ inline bool chdir (const wchar_t* dir)
     return ::SetCurrentDirectoryW (dir);
 }
 #else
-inline bool chdir (const basic_string<wchar_t>& dir)
+inline bool chdir (const wstring& dir)
 {
     string cname;
     return wcstombs (dir, cname) && sys::chdir (cname.c_str());
@@ -92,7 +93,7 @@ inline bool mkdir (const wchar_t* dir)
     return ::CreateDirectoryW (dir, 0);
 }
 #else
-inline bool mkdir (const basic_string<wchar_t>& dir)
+inline bool mkdir (const wstring& dir)
 {
     string cname;
     return wcstombs (dir, cname) && sys::mkdir (cname.c_str());
@@ -122,7 +123,7 @@ inline bool rmdir (const wchar_t* dir)
     return ::RemoveDirectoryW (dir);
 }
 #else
-inline bool rmdir (const basic_string<wchar_t>& dir)
+inline bool rmdir (const wstring& dir)
 {
     string cname;
     return wcstombs (dir, cname) && sys::rmdir (cname.c_str());
@@ -149,11 +150,11 @@ inline bool getcwd (char* buf, size_t buf_size)
 
 #ifndef _WIN32
 namespace detail {
-    bool wgetcwd (wchar_t* buf, size_t buf_size);
+    bool wgetcwd (UChar* buf, size_t buf_size);
 }
 #endif
 
-inline bool getcwd (wchar_t* buf, size_t buf_size)
+inline bool getcwd (UChar* buf, size_t buf_size)
 {
 #ifdef _WIN32
     size_t ret = ::GetCurrentDirectoryW (buf_size, buf);
@@ -181,7 +182,7 @@ bool create_path (const basic_string<char_type>& path);
 
 #ifndef _WIN32
 template <>
-inline bool create_path (const basic_string<wchar_t>& path)
+inline bool create_path (const wstring& path)
 {
     string cname;
     return wcstombs (path, cname) && create_path (cname);
@@ -218,7 +219,7 @@ inline bool exists (const wchar_t* name)
     return (::GetFileAttributesW (name) != 0xffffffff);
 }
 #else
-inline bool exists (const basic_string<wchar_t>& name)
+inline bool exists (const wstring& name)
 {
     string cname;
     return wcstombs (name, cname) && exists (cname.c_str());
@@ -248,7 +249,7 @@ inline bool unlink (const wchar_t* name)
     return ::DeleteFileW (name);
 }
 #else
-inline bool unlink (const basic_string<wchar_t>& name)
+inline bool unlink (const wstring& name)
 {
     string cname;
     return wcstombs (name, cname) && unlink (cname.c_str());
@@ -278,8 +279,8 @@ inline bool rename (const wchar_t* oldname, const wchar_t* newname)
     return ::MoveFileW (oldname, newname);
 }
 #else
-inline bool rename (const basic_string<wchar_t>& oldname,
-		    const basic_string<wchar_t>& newname)
+inline bool rename (const wstring& oldname,
+		    const wstring& newname)
 {
     string oname, nname;
     return wcstombs (oldname, oname) && wcstombs (newname, nname)
@@ -349,7 +350,7 @@ inline time get_mod_time (const wchar_t* name)
     return time (attr.ftLastWriteTime);
 }
 #else
-inline time get_mod_time (const basic_string<wchar_t>& name)
+inline time get_mod_time (const wstring& name)
 {
     string cname;
     if (!wcstombs (name, cname))
@@ -418,7 +419,7 @@ inline size_type get_size (const wchar_t* name)
     return invalid_size;
 }
 #else
-inline size_type get_size (const basic_string<wchar_t>& name)
+inline size_type get_size (const wstring& name)
 {
     string cname;
     if (wcstombs (name, cname))
@@ -484,7 +485,7 @@ bool getcwd (basic_string<char>& cwd)
 }
 
 template<>
-bool getcwd (basic_string<wchar_t>& cwd)
+bool getcwd (wstring& cwd)
 {
     string ccwd;
     bool success = getcwd (ccwd) && mbstowcs (ccwd, cwd);

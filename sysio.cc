@@ -25,22 +25,12 @@
 //
 
 #include "sysio.h"
+#include "sysstring.h"
 
 #ifdef _WIN32
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include <windows.h>
-
 #else
-
 #include <cerrno>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <wchar.h>
-#include <stdlib.h>
-
 #endif /* _WIN32 */
 
 namespace sys {
@@ -155,22 +145,16 @@ io::ios_to_sys (io::ios_mode ios_mode)
     return posix_mode;
 }
 
-template <> raw_handle
-create_file (const wchar_t* name, io::sys_mode flags, io::win_sharemode)
+raw_handle
+create_file (const UChar* name, io::sys_mode flags, io::win_sharemode)
 {
-    file_handle handle;
-
-    size_t wlen = ::wcslen (name);
-    size_t mbbuf_size = wlen*std::max (MB_LEN_MAX, 5)+1;
-    char* mbbuf = new char[mbbuf_size];
-    size_t mblen = ::wcstombs (mbbuf, name, mbbuf_size);
-    if (mblen != static_cast<size_t>(-1) && mblen != mbbuf_size)
-	handle = ::open (mbbuf, flags, 0666);
-    else
-	errno = ENAMETOOLONG;
-    delete[] mbbuf;
-
-    return handle.release();
+    string cname;
+    if (!wcstombs (name, cname))
+    {
+	errno = ENOENT;
+	return file_handle::invalid_handle();
+    }
+    return ::open (cname.c_str(), flags, 0666);
 }
 
 #endif /* _WIN32 */

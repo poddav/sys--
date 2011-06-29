@@ -41,16 +41,13 @@ namespace detail {
 #ifdef _WIN32
 typedef HMODULE module_type;
 typedef FARPROC proc_type;
-
-module_type load_library (const char* name);
-module_type load_library (const wchar_t* name);
 #else
 typedef void*	module_type;
 typedef void*	proc_type;
+#endif
 
 module_type load_library (const char* name);
-module_type load_library (const wchar_t* name);
-#endif
+module_type load_library (const UChar* name);
 
 } // namespace detail
 
@@ -69,7 +66,7 @@ public:
     bool operator! () const { return !lib; }
 
     proc_type	get_proc (const char* symbol);
-    proc_type	get_proc (const wchar_t* symbol);
+    proc_type	get_proc (const UChar* symbol);
     
     module_type	get_handle () const { return lib; }
     void	close ();
@@ -115,7 +112,7 @@ load_library (const char* name)
 }
 
 inline detail::module_type detail::
-load_library (const wchar_t* name)
+load_library (const UChar* name)
 {
     return ::LoadLibraryW (name);
 }
@@ -137,7 +134,7 @@ get_proc (const char* symbol)
 }
 
 inline proc_type library::
-get_proc (const wchar_t* symbol)
+get_proc (const UChar* symbol)
 {
     return lib? ::GetProcAddressW (lib, symbol): 0;
 }
@@ -168,7 +165,7 @@ load_library (const char* name)
 }
 
 inline detail::module_type detail::
-load_library (const wchar_t* name)
+load_library (const UChar* name)
 {
     string cname;
     return wcstombs (name, cname) && ::dlopen (cname.c_str(), RTLD_LAZY);

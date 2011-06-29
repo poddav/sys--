@@ -28,6 +28,7 @@
 #define SYSIO_H
 
 #include "syshandle.h"
+#include "sysstring.h"
 #include <ios>		// for std::ios
 #include <utility>	// for std::pair
 #include <fcntl.h>	// for POSIX io flags
@@ -302,9 +303,11 @@ inline bool isatty (raw_handle handle)
 #endif
 }
 
-template <typename CharT> raw_handle
-create_file (const CharT* filename, io::sys_mode mode,
-	     io::win_sharemode share = io::share_default);
+raw_handle create_file (const char* filename, io::sys_mode mode,
+	   		io::win_sharemode share = io::share_default);
+
+raw_handle create_file (const UChar* filename, io::sys_mode mode,
+	   		io::win_sharemode share = io::share_default);
 
 // open_file -- alias for sys::create_file
 
@@ -315,15 +318,15 @@ open_file (const CharT* filename, io::sys_mode mode,
 
 #ifdef _WIN32
 
-template <> inline raw_handle
+inline raw_handle
 create_file (const char* name, io::sys_mode flags, io::win_sharemode share)
 {
     return ::CreateFileA (name, io::win_io_mode (flags), share, NULL,
 			  io::win_create_mode (flags), FILE_ATTRIBUTE_NORMAL, NULL);
 }
 
-template <> inline raw_handle
-create_file (const wchar_t* name, io::sys_mode flags, io::win_sharemode share)
+inline raw_handle
+create_file (const UChar* name, io::sys_mode flags, io::win_sharemode share)
 {
     return ::CreateFileW (name, io::win_io_mode (flags), share, NULL,
 			  io::win_create_mode (flags), FILE_ATTRIBUTE_NORMAL, NULL);
@@ -351,7 +354,7 @@ seek_file (raw_handle file, std::streamoff off, std::ios::seekdir dir)
 
 #else
 
-template <> inline raw_handle
+inline raw_handle
 create_file (const char* name, io::sys_mode flags, io::win_sharemode)
 {
     return ::open (name, flags, 0666);

@@ -207,7 +207,7 @@ inline bool get_env (const char* var, basic_string<char>& value)
 }
 
 template<>
-bool get_env (const wchar_t* var, basic_string<wchar_t>& value)
+bool get_env (const UChar* var, basic_string<UChar>& value)
 {
     string varname;
     if (!wcstombs (var, varname))
@@ -227,7 +227,7 @@ inline bool unset_env (const char* varname)
 { return ::unsetenv (varname) != -1; }
 
 template<>
-bool unset_env (const wchar_t* varname)
+inline bool unset_env (const UChar* varname)
 {
     string cvar;
     if (!wcstombs (varname, cvar))
