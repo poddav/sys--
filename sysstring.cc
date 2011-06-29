@@ -89,7 +89,7 @@ DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage)
 
 } // namespace detail
 
-#else // _WIN32
+#elif 0 // not used
 
 DLLIMPORT int wcstombs (const wstring& wstr, string& cstr)
 {
