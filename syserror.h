@@ -178,10 +178,7 @@ get_last_error()
 template <typename CharT>
 void error_info::make_what ()
 {
-    std::locale loc;
-    typedef std::ctype<CharT> ctype;
-    const ctype& ctype_facet = std::use_facet<ctype> (loc);
-    CharT colon[] = { ctype_facet.widen (':'), ctype_facet.widen (' '), 0 };
+    const CharT colon[3] = { ':', ' ', 0 };
 
     basic_string<CharT> what_str;
 
