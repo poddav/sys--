@@ -118,8 +118,8 @@ get_text (string_type& str)
 	    if (ptr[size-1] == 0)
 	       	--size; // do not copy terminating null character
 	    str.assign (ptr.get(), size);
-	    ret = true;
 	}
+	ret = true;
     }
     return ret;
 }
