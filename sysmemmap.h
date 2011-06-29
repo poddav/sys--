@@ -337,7 +337,7 @@ remap (off_type offset, size_type n)
 /// write to readonly mapped objects.  better use sys::mapping::readwrite,
 /// sys::mapping::readonly and desired view classes upon them instead.
 
-class mapped_file : public mapping::map_base
+class DLLIMPORT mapped_file : public mapping::map_base
 {
 public:
     mapped_file () { }
@@ -361,7 +361,7 @@ public:
 };
 
 template <class T>
-class mapped_file::view : public mapping::map_base::view<T>
+class DLLIMPORT mapped_file::view : public mapping::map_base::view<T>
 {
 public:
     typedef mapping::map_base::off_type		off_type;
