@@ -157,12 +157,20 @@ public:
     template <typename CharT>
     explicit readonly (const CharT* filename, off_type size = 0)
        	: map_base (filename, read, size) { }
+    template <typename Ch, typename Tr, typename Al>
+    explicit readonly (const basic_string<Ch,Tr,Al>& filename, off_type size = 0)
+	: map_base (filename.c_str(), read, size) { }
     explicit readonly (sys::raw_handle handle, off_type size = 0)
        	: map_base (handle, read, size) { }
 
     template <typename CharT>
     void open (const CharT* filename, off_type size = 0)
        	{ map_base::open (filename, read, size); }
+
+    template <typename Ch, typename Tr, typename Al>
+    void open (const basic_string<Ch,Tr,Al>& filename, off_type size = 0)
+	{ map_base::open (filename.c_str(), read, size); }
+
     void open (sys::raw_handle handle, off_type size = 0)
        	{ map_base::open (handle, read, size); }
 };
@@ -181,6 +189,11 @@ public:
 			off_type size = 0)
        	: map_base (filename, mode == writeshare? write: copy, size) { }
 
+    template <typename Ch, typename Tr, typename Al>
+    explicit readwrite (const basic_string<Ch,Tr,Al>& filename, write_mode_t mode = writeshare,
+		       	off_type size = 0)
+       	: map_base (filename.c_str(), mode == writeshare? write: copy, size) { }
+
     explicit readwrite (sys::raw_handle handle, write_mode_t mode = writeshare,
 			off_type size = 0)
        	: map_base (handle, mode == writeshare? write: copy, size) { }
@@ -188,6 +201,11 @@ public:
     template <typename CharT>
     void open (const CharT* filename, write_mode_t mode = writeshare, off_type size = 0)
        	{ map_base::open (filename, mode == writeshare? write: copy, size); }
+
+    template <typename Ch, typename Tr, typename Al>
+    void open (const basic_string<Ch,Tr,Al>& filename, write_mode_t mode = writeshare,
+	       off_type size = 0)
+	{ map_base::open (filename.c_str(), mode == writeshare? write: copy, size); }
 
     void open (sys::raw_handle handle, write_mode_t mode = writeshare, off_type size = 0)
        	{ map_base::open (handle, mode == writeshare? write: copy, size); }
