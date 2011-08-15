@@ -39,6 +39,8 @@
 
 namespace sys {
 
+using boost::shared_ptr;
+
 class error_info
 {
 public:
@@ -54,8 +56,22 @@ public:
 	, m_object (object)
 	{ set_system_message(); }
 
+    template <typename Ch, typename Tr, typename Al>
+    explicit error_info (const basic_string<Ch,Tr,Al>& object)
+	: m_error_code (get_last_error())
+	, m_object (object)
+	{ set_system_message(); }
+
     template <typename CharT>
     error_info (const CharT* object, const CharT* message)
+	: m_error_code (get_last_error())
+	, m_custom_message (message)
+	, m_object (object)
+	{ set_system_message(); }
+
+    template <typename Ch, typename Tr, typename Al>
+    explicit error_info (const basic_string<Ch,Tr,Al>& object,
+			 const basic_string<Ch,Tr,Al>& message)
 	: m_error_code (get_last_error())
 	, m_custom_message (message)
 	, m_object (object)
@@ -119,9 +135,18 @@ public:
 	: m_info (new error_info (object))
        	{ }
 
+    template <typename Ch, typename Tr, typename Al>
+    explicit generic_error (const basic_string<Ch,Tr,Al>& object)
+       	: m_info (new error_info (object)) { }
+
     template <typename CharT>
     explicit generic_error (const CharT* object, const CharT* message)
 	: m_info (new error_info (object, message)) { }
+
+    template <typename Ch, typename Tr, typename Al>
+    explicit generic_error (const basic_string<Ch,Tr,Al>& object,
+   			    const basic_string<Ch,Tr,Al>& message)
+       	: m_info (new error_info (object, message)) { }
 
     ~generic_error () throw() { }
 
@@ -146,7 +171,7 @@ public:
 	{ return m_info->what<CharT>(); }
 
 protected:
-    boost::shared_ptr<error_info>	m_info;
+    shared_ptr<error_info>	m_info;
 };
 
 class file_error : public generic_error
@@ -155,9 +180,18 @@ public:
     template <typename CharT>
     explicit file_error (const CharT* filename) : generic_error (filename) { }
 
+    template <typename Ch, typename Tr, typename Al>
+    explicit file_error (const basic_string<Ch,Tr,Al>& filename)
+       	: generic_error (filename) { }
+
     template <typename CharT>
     file_error (const CharT* filename, const CharT* custom_msg)
 	: generic_error (filename, custom_msg) { }
+
+    template <typename Ch, typename Tr, typename Al>
+    explicit file_error (const basic_string<Ch,Tr,Al>& filename,
+			 const basic_string<Ch,Tr,Al>& custom_msg)
+       	: generic_error (filename, custom_msg) { }
 
     template <typename CharT>
     const CharT* get_filename () const { return get_object<CharT>(); }

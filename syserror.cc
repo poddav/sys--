@@ -68,12 +68,13 @@ set_system_message ()
 {
     if (m_error_code)
     {
+	const char* msg = 0;
 #if HAS_STRERROR_R
 	local_buffer<char> msg_buf;
-	strerror_r (m_error_code, msg_buf.get(), msg_buf.size());
-	const char* msg = msg_buf.get();
+	if (-1 != strerror_r (m_error_code, msg_buf.get(), msg_buf.size()))
+	    msg = msg_buf.get();
 #else
-	const char* msg = std::strerror (m_error_code);
+	msg = std::strerror (m_error_code);
 #endif
 	if (msg && *msg)
 	    m_system_message.assign (msg, std::strlen (msg));
