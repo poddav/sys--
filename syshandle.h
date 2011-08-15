@@ -51,8 +51,22 @@ typedef HANDLE	raw_handle;
 typedef int	raw_handle;
 #endif
 
-template <long invalid_handle_value>
-class DLLIMPORT generic_handle
+namespace detail {
+    struct base_handle
+    {
+	static bool close_handle (raw_handle h)
+	{
+#ifdef _WIN32
+    	    return ::CloseHandle (h);
+#else
+	    return ::close (h) != -1;
+#endif
+	}
+    };
+} // namespace detail
+
+template <long invalid_handle_value, class BaseHandle = detail::base_handle>
+class DLLIMPORT generic_handle : private BaseHandle
 {
 public:
     typedef raw_handle	handle_type;
@@ -94,7 +108,7 @@ public:
 	    bool rc = false;
 	    if (handle != invalid_handle())
 	    {
-		rc = close_handle (handle);
+		rc = this->close_handle (handle);
 		handle = invalid_handle();
 	    }
 	    return rc;
@@ -131,7 +145,7 @@ public:
     static handle_type invalid_handle ()
        	{
 #ifdef _WIN32
-	    return reinterpret_cast<handle_type> (invalid_handle_value);
+	    return reinterpret_cast<handle_type> (static_cast<LONG_PTR> (invalid_handle_value));
 #else
 	    return static_cast<handle_type> (invalid_handle_value);
 #endif
@@ -139,15 +153,6 @@ public:
 
 private:
     handle_type		handle;
-
-    static bool close_handle (handle_type h)
-	{
-#ifdef _WIN32
-	    return ::CloseHandle (h);
-#else
-	    return ::close (h) != -1;
-#endif
-	}
 };
 
 #ifdef _WIN32
