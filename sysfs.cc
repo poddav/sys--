@@ -32,7 +32,7 @@ namespace sys {
 
 namespace detail {
 
-bool wgetcwd (UChar* buf, size_t buf_size)
+bool wgetcwd (WChar* buf, size_t buf_size)
 {
     if (!buf_size)
 	return false;
@@ -48,7 +48,7 @@ bool wgetcwd (UChar* buf, size_t buf_size)
     if (wcwd.size() >= buf_size)
 	return false;
 
-    std::char_traits<UChar>::copy (buf, wcwd.c_str(), wcwd.size()+1);
+    std::char_traits<WChar>::copy (buf, wcwd.c_str(), wcwd.size()+1);
     return true;
 }
 
