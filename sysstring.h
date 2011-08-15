@@ -59,28 +59,50 @@ using ext::basic_stringstream;
 using bin::uint8_t;
 using bin::uint16_t;
 using bin::uint32_t;
+using bin::int16_t;
+using bin::int32_t;
 using std::size_t;
 
-#if defined(_WIN32) || SYSPP_SIZEOF_WCHAR_T == 2
-typedef wchar_t  UChar16;
+#if defined(_WIN32) || __SIZEOF_WCHAR_T__ == 2
+typedef wchar_t  WChar16;
 #define _U16(STR)	L##STR
 #elif HAS_CHAR16_T
-typedef char16_t UChar16;
+typedef char16_t WChar16;
 #define _U16(STR)	u##STR
 #elif defined(__CHAR16_TYPE__)
-typedef __CHAR16_TYPE__ UChar16;
+typedef __CHAR16_TYPE__ WChar16;
 #define _U16(STR)	u##STR
 #else
-typedef uint16_t UChar16;
+typedef int16_t  WChar16;
 #define _U16(STR)	STR
+#endif
+
+#if __SIZEOF_WCHAR_T__ == 4 || WCHAR_MAX == 2147483647
+typedef wchar_t  WChar32;
+#define _U32(STR)	L##STR
+#elif HAS_CHAR32_T
+typedef char32_t WChar32;
+#define _U32(STR)	U##STR
+#elif defined(__CHAR32_TYPE__)
+typedef __CHAR32_TYPE__ WChar32;
+#define _U32(STR)	U##STR
+#else
+typedef int32_t  WChar32;
+#define _U32(STR)	STR
 #endif
 
 typedef uint8_t  UChar8;
 typedef uint32_t UChar32;
-typedef UChar16  UChar;
+typedef WChar16  WChar;
 
-typedef basic_string<UChar> UString; // UTF-16 string
-typedef UString  wstring;
+typedef basic_string<WChar16>	wstring;   // UTF-16 string
+typedef basic_string<WChar32>	u32string; // UTF-32 string
+
+#if defined(UNICODE) || defined(_UNICODE)
+typedef wstring	    tstring;
+#else
+typedef string	    tstring;
+#endif
 
 static const UChar32 replacement_code_point = 0xfffd; // code point for invalid characters
 
@@ -116,8 +138,8 @@ int u16tou8 (const wstring& src, string& dst);
 
 // u16len (STR)
 /// \return length, in characters, of the null-terminated UTF-16 character sequence STR.
-inline size_t u16len (const UChar* str)
-    { return std::char_traits<UChar>::length (str); }
+inline size_t u16len (const WChar* str)
+    { return std::char_traits<WChar>::length (str); }
 
 // mbslen (STR)
 /// \return length, in characters, of the null-terminated UTF-8 multibyte character
@@ -223,12 +245,36 @@ UChar32 u8tou32 (Iterator& first, Iterator last)
     return code_point;
 }
 
+// u16tou32 (FIRST, LAST)
+// convert single UTF-16 character into Unicode code point.
+
+template <class Iterator>
+inline UChar32 u16tou32 (Iterator& first, Iterator last)
+{
+    UChar32 code_point = static_cast<uint16_t> (*first++);
+    if (code_point >= 0xd800 && code_point <= 0xdbff)
+    {
+	if (first != last)
+	{
+	    UChar32 next = static_cast<uint16_t> (*first);
+	    if (next >= 0xdc00 && next <= 0xdfff)
+	    {
+		++first;
+		code_point = (code_point - 0xd800) << 10;
+		code_point |= next - 0xdc00;
+		code_point += 0x10000;
+	    }
+	}
+    }
+    return code_point;
+}
+
 // u32tou8 (CODE, OUT)
 // convert Unicode code point into UTF-8 sequence and put it into OUT iterator
 // Returns: number of bytes in resulting UTF-8 sequence
 
 template <class Iterator>
-int u32tou8 (UChar32 code, Iterator out)
+int u32tou8 (UChar32 code, Iterator& out)
 {
     if (code > 0x10ffff)
 	code = replacement_code_point;
@@ -260,6 +306,30 @@ int u32tou8 (UChar32 code, Iterator out)
     }
 }
 
+// u32tou16 (CODE, OUT)
+// convert Unicode code point into UTF-16 sequence and put it into OUT iterator
+// Returns: number of UTF-16 characters in resulting sequence (surrogate pairs are
+//          counted as two characters).
+
+template <class Iterator>
+inline int u32tou16 (UChar32 code, Iterator& out)
+{
+    if (code > 0x10ffff)
+	code = replacement_code_point;
+    if (code < 0x10000)
+    {
+	*out++ = static_cast<WChar> (code);
+	return 1;
+    }
+    else
+    {
+	code -= 0x10000;
+	*out++ = static_cast<WChar> (0xd800 + (code >> 10));
+	*out++ = static_cast<WChar> (0xdc00 + (code & 0x3ff));
+	return 2;
+    }
+}
+
 } // namespace detail
 
 template <class InIterator, class OutIterator>
@@ -268,21 +338,9 @@ int u8tou16 (InIterator first, InIterator last, OutIterator out)
     int count = 0;
     while (first != last)
     {
-	UChar32 code_point = detail::u8tou32 (first, last);
 	// first is updated by u8tou32
-
-	if (code_point > 0x10ffff)
-	    code_point = replacement_code_point;
-	if (code_point < 0x10000)
-	{
-	    *out++ = static_cast<UChar> (code_point);
-	}
-	else
-	{
-	    code_point -= 0x10000;
-	    *out++ = (static_cast<UChar> (0xd800 + (code_point >> 10)));
-	    *out++ = (static_cast<UChar> (0xdc00 + (code_point & 0x3ff)));
-	}
+	UChar32 code_point = detail::u8tou32 (first, last);
+	detail::u32tou16 (code_point, out);
 	++count;
     }
     return count;
@@ -297,26 +355,33 @@ inline int u8tou16 (const string& src, wstring& dst)
 }
 
 template <class InIterator, class OutIterator>
+int u32tou16 (InIterator first, InIterator last, OutIterator out)
+{
+    int count = 0;
+    for ( ; first != last; ++first)
+    {
+	detail::u32tou16 (*first, out);
+	++count;
+    }
+    return count;
+}
+
+inline int u32tou16 (const u32string& src, wstring& dst)
+{
+    dst.clear();
+    if (dst.capacity() < src.size())
+	dst.reserve (src.size());
+    return u32tou16 (src.begin(), src.end(), std::back_inserter (dst));
+}
+
+template <class InIterator, class OutIterator>
 int u16tou8 (InIterator first, InIterator last, OutIterator out)
 {
     int count = 0;
     while (first != last)
     {
-	UChar32 code_point = *first++;
-	if (code_point >= 0xd800 && code_point <= 0xdbff)
-	{
-	    if (first != last)
-	    {
-		UChar32 next = *first;
-		if (next >= 0xdc00 && next <= 0xdfff)
-		{
-		    ++first;
-		    code_point = (code_point - 0xd800) << 10;
-		    code_point |= next - 0xdc00;
-		    code_point += 0x10000;
-		}
-	    }
-	}
+	// first is updated by u16tou32
+	UChar32 code_point = detail::u16tou32 (first, last);
 	detail::u32tou8 (code_point, out);
 	++count;
     }
@@ -331,6 +396,23 @@ inline int u16tou8 (const wstring& src, string& dst)
     return u16tou8 (src.begin(), src.end(), std::back_inserter (dst));
 }
 
+template <class InIterator, class OutIterator>
+int u32tou8 (InIterator first, InIterator last, OutIterator out)
+{
+    int count = 0;
+    for ( ; first != last; ++first)
+	count += detail::u32tou8 (*first, out);
+    return count;
+}
+
+inline int u32tou8 (const u32string& src, string& dst)
+{
+    dst.clear();
+    if (dst.capacity() < src.size())
+	dst.reserve (src.size());
+    return u32tou8 (src.begin(), src.end(), std::back_inserter (dst));
+}
+
 // ---------------------------------------------------------------------------
 /// \class local_buffer
 /// \brief Buffer that uses stack for small allocations and dynamic memory for larger ones.
@@ -340,7 +422,7 @@ class local_buffer
 {
 public:
     typedef T		value_type;
-    typedef std::size_t	size_type;
+    typedef size_t	size_type;
 
     enum {
 	// for large types, reduce size of stack-allocated array
@@ -410,7 +492,10 @@ class uni_string
 public:
     uni_string () { }
     uni_string (const char* str) : m_cstr (str? str: "") { }
-    uni_string (const UChar* str) : m_wstr (str? str: (const UChar*)L"") { }
+    uni_string (const WChar* str) : m_wstr (str? str: (const WChar*)L"") { }
+    uni_string (const string& str) : m_cstr (str) { }
+    uni_string (const wstring& str) : m_wstr (str) { }
+    uni_string (const u32string& str) { u32tou8 (str, m_cstr); }
 
     template <typename CharT>
     const basic_string<CharT>& get_string ();
@@ -419,17 +504,18 @@ public:
     const CharT* get () { return get_string<CharT>().c_str(); }
 
     const char* get_cstr();
-    const UChar* get_wstr();
+    const WChar* get_wstr();
 
     bool empty () const { return m_cstr.empty() && m_wstr.empty(); }
 
     void assign (const char* str, size_t len)
 	{ m_cstr.assign (str, len); m_wstr.clear(); }
-    void assign (const UChar* str, size_t len)
+    void assign (const WChar* str, size_t len)
        	{ m_wstr.assign (str, len); m_cstr.clear(); }
 
     void assign (const string& str) { m_cstr.assign (str); m_wstr.clear(); }
     void assign (const wstring& str) { m_wstr.assign (str); m_cstr.clear(); }
+    void assign (const u32string& str) { u32tou8 (str, m_cstr); m_wstr.clear(); }
 };
 
 template <> inline const string& uni_string::get_string<char> ()
@@ -439,7 +525,7 @@ template <> inline const string& uni_string::get_string<char> ()
     return m_cstr;
 }
 
-template <> inline const wstring& uni_string::get_string<UChar> ()
+template <> inline const wstring& uni_string::get_string<WChar> ()
 {
     if (m_wstr.empty() && !m_cstr.empty())
 	mbstowcs (m_cstr, m_wstr);
@@ -449,8 +535,8 @@ template <> inline const wstring& uni_string::get_string<UChar> ()
 inline const char* uni_string::get_cstr()
 { return get_string<char>().c_str(); }
 
-inline const UChar* uni_string::get_wstr()
-{ return get_string<UChar>().c_str(); }
+inline const WChar* uni_string::get_wstr()
+{ return get_string<WChar>().c_str(); }
 
 // ---------------------------------------------------------------------------
 namespace detail
@@ -471,13 +557,10 @@ namespace detail
     // type char_type.
 
     template <typename char_type>
-    size_t mb_len_max (size_t n);
+    size_t mb_len_max (size_t n) { return n * sizeof (char_type); }
 
     template<>
-    inline size_t mb_len_max<char> (size_t n) { return n * MB_LEN_MAX; }
-
-    template<>
-    inline size_t mb_len_max<UChar> (size_t n) { return n * sizeof(UChar); }
+    inline size_t mb_len_max<char> (size_t n) { return n * mb_len_max(); }
 
     // template opp_type<CharT>
     // defines typedefs for character type opposite to CharT
@@ -495,11 +578,11 @@ namespace detail
     };
 
     template <>
-    struct opp_type<char> : char_def_type<UChar>
+    struct opp_type<char> : char_def_type<WChar>
     { };
 
     template <>
-    struct opp_type<UChar> : char_def_type<char>
+    struct opp_type<WChar> : char_def_type<char>
     { };
 } // namespace detail
 } // namespace sys
