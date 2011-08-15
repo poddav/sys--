@@ -348,6 +348,9 @@ m_grow (size_type new_size)
 {
     off_type putpos = this->poffset();
     off_type getpos = this->goffset();
+    size_type alt_size = this->epptr() - this->eback();
+    alt_size += alt_size/2; // grow by half
+    new_size = std::max (alt_size, new_size);
     char_type* new_buf = this->allocate (new_size);
     traits_type::copy (new_buf, this->eback(), this->epptr() - this->eback());
     this->setbuf (new_buf, new_size);
