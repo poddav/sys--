@@ -47,7 +47,7 @@ typedef void*	proc_type;
 #endif
 
 module_type load_library (const char* name);
-module_type load_library (const UChar* name);
+module_type load_library (const WChar* name);
 
 } // namespace detail
 
@@ -66,7 +66,7 @@ public:
     bool operator! () const { return !lib; }
 
     proc_type	get_proc (const char* symbol);
-    proc_type	get_proc (const UChar* symbol);
+    proc_type	get_proc (const WChar* symbol);
     
     module_type	get_handle () const { return lib; }
     void	close ();
@@ -112,7 +112,7 @@ load_library (const char* name)
 }
 
 inline detail::module_type detail::
-load_library (const UChar* name)
+load_library (const WChar* name)
 {
     return ::LoadLibraryW (name);
 }
@@ -134,7 +134,7 @@ get_proc (const char* symbol)
 }
 
 inline proc_type library::
-get_proc (const UChar* symbol)
+get_proc (const WChar* symbol)
 {
     return lib? ::GetProcAddressW (lib, symbol): 0;
 }
@@ -165,7 +165,7 @@ load_library (const char* name)
 }
 
 inline detail::module_type detail::
-load_library (const UChar* name)
+load_library (const WChar* name)
 {
     string cname;
     return wcstombs (name, cname) && ::dlopen (cname.c_str(), RTLD_LAZY);

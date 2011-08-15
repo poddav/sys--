@@ -150,11 +150,11 @@ inline bool getcwd (char* buf, size_t buf_size)
 
 #ifndef _WIN32
 namespace detail {
-    bool wgetcwd (UChar* buf, size_t buf_size);
+    bool wgetcwd (WChar* buf, size_t buf_size);
 }
 #endif
 
-inline bool getcwd (UChar* buf, size_t buf_size)
+inline bool getcwd (WChar* buf, size_t buf_size)
 {
 #ifdef _WIN32
     size_t ret = ::GetCurrentDirectoryW (buf_size, buf);
@@ -465,7 +465,7 @@ bool getcwd (basic_string<char_type>& cwd)
 #else
 
 template <>
-bool getcwd (basic_string<char>& cwd)
+inline bool getcwd (basic_string<char>& cwd)
 {
     cwd.clear();
     local_buffer<char> buf;
@@ -485,7 +485,7 @@ bool getcwd (basic_string<char>& cwd)
 }
 
 template<>
-bool getcwd (wstring& cwd)
+inline bool getcwd (wstring& cwd)
 {
     string ccwd;
     bool success = getcwd (ccwd) && mbstowcs (ccwd, cwd);

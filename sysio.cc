@@ -146,7 +146,7 @@ io::ios_to_sys (io::ios_mode ios_mode)
 }
 
 raw_handle
-create_file (const UChar* name, io::sys_mode flags, io::win_sharemode)
+create_file (const WChar* name, io::sys_mode flags, io::win_sharemode)
 {
     string cname;
     if (!wcstombs (name, cname))

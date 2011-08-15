@@ -306,7 +306,7 @@ inline bool isatty (raw_handle handle)
 raw_handle create_file (const char* filename, io::sys_mode mode,
 	   		io::win_sharemode share = io::share_default);
 
-raw_handle create_file (const UChar* filename, io::sys_mode mode,
+raw_handle create_file (const WChar* filename, io::sys_mode mode,
 	   		io::win_sharemode share = io::share_default);
 
 // open_file -- alias for sys::create_file
@@ -326,7 +326,7 @@ create_file (const char* name, io::sys_mode flags, io::win_sharemode share)
 }
 
 inline raw_handle
-create_file (const UChar* name, io::sys_mode flags, io::win_sharemode share)
+create_file (const WChar* name, io::sys_mode flags, io::win_sharemode share)
 {
     return ::CreateFileW (name, io::win_io_mode (flags), share, NULL,
 			  io::win_create_mode (flags), FILE_ATTRIBUTE_NORMAL, NULL);
