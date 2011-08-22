@@ -26,7 +26,7 @@
 
 #include "fstream.hpp"
 
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
 #include <algorithm>	// for std::count
 #endif
 
@@ -269,7 +269,7 @@ seekpos (pos_type p, std::ios::openmode)
 	return pos_type(-1);
 }
 
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
 
 // m_flush_text()
 //

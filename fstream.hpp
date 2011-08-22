@@ -36,7 +36,7 @@
 #include <iostream>	// for std::istream and std::ostream
 #include <cstdio>	// for BUFSIZ
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(SYSPP_FSTREAM_TEXT_MODE)
 #define SYSPP_FSTREAM_TEXT_MODE	1
 #endif
 
@@ -140,7 +140,7 @@ private: // methods
 	{
 	    if (std::streamsize buffered = m_input_size())
 	    {
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
 		if (m_mode & std::ios::binary)
 		    m_seek (-buffered, std::ios::cur);
 		else
@@ -171,7 +171,7 @@ private: // methods
     //
     std::streamsize m_writefile (const char* buf, std::streamsize size);
 
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
     // text mode read/write methods
     //
     std::streamsize m_read_text (char* buf, std::streamsize size);
@@ -459,7 +459,7 @@ open (const CharT* filename, std::ios::openmode mode,
 inline std::streamsize filebuf::
 m_readfile (char_type* buf, std::streamsize size)
 {
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
     if (!(m_mode & std::ios::binary))
 	return m_read_text (buf, size);
 #endif
@@ -471,14 +471,14 @@ m_writefile (const char_type* buf, std::streamsize size)
 {
     if (m_mode & std::ios::app)
 	m_seek (0, std::ios::end);
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
     if (!(m_mode & std::ios::binary))
 	return m_write_text (buf, size);
 #endif
     return sys::write_file (m_handle, buf, size);
 }
 
-#ifdef SYSPP_FSTREAM_TEXT_MODE
+#if SYSPP_FSTREAM_TEXT_MODE
 
 // m_write_text (buf, size)
 //
