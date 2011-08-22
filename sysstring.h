@@ -401,7 +401,10 @@ int u32tou8 (InIterator first, InIterator last, OutIterator out)
 {
     int count = 0;
     for ( ; first != last; ++first)
-	count += detail::u32tou8 (*first, out);
+    {
+	detail::u32tou8 (*first, out);
+	++count;
+    }
     return count;
 }
 
