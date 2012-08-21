@@ -51,6 +51,14 @@ typedef HANDLE	raw_handle;
 typedef int	raw_handle;
 #endif
 
+template <typename Type>
+raw_handle handle_cast (Type h)
+#ifdef _WIN32
+    { return reinterpret_cast<sys::raw_handle> (static_cast<LONG_PTR> (h)); }
+#else
+    { return static_cast<sys::raw_handle> (h); }
+#endif
+
 namespace detail {
     struct base_handle
     {
@@ -123,7 +131,7 @@ public:
 	    }
 	}
 
-    bool valid () const { return handle != invalid_handle(); }
+    bool valid () const { return valid (handle); }
 
     bool operator! () const { return !valid(); }
 
@@ -142,7 +150,7 @@ public:
 	    return h;
 	}
 
-    static handle_type invalid_handle ()
+    SYSPP_static_constexpr handle_type invalid_handle ()
        	{
 #ifdef _WIN32
 	    return reinterpret_cast<handle_type> (static_cast<LONG_PTR> (invalid_handle_value));
@@ -150,6 +158,8 @@ public:
 	    return static_cast<handle_type> (invalid_handle_value);
 #endif
        	}
+
+    static bool valid (raw_handle h) { return h != invalid_handle(); }
 
 private:
     handle_type		handle;
