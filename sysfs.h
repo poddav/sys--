@@ -194,7 +194,7 @@ inline bool create_path (const wstring& path)
 namespace file {
 
 #ifdef _WIN32
-typedef ULONGLONG	size_type;
+typedef LONGLONG	size_type;
 #else
 typedef off_t		size_type;
 #endif
@@ -374,9 +374,8 @@ inline time get_mod_time (const basic_string<Ch,Tr,Al>& name)
 inline size_type get_size (sys::raw_handle handle)
 {
 #ifdef _WIN32
-    ULARGE_INTEGER size;
-    size.LowPart = ::GetFileSize (handle, &size.HighPart);
-    if (size.LowPart != 0xffffffff || ::GetLastError() == NO_ERROR)
+    LARGE_INTEGER size;
+    if (::GetFileSizeEx (handle, &size))
 	return size.QuadPart;
 #else
     struct stat buf;
@@ -392,7 +391,7 @@ inline size_type get_size (const char* name)
     WIN32_FILE_ATTRIBUTE_DATA attr;
     if (::GetFileAttributesExA (name, GetFileExInfoStandard, &attr))
     {
-	ULARGE_INTEGER size;
+	LARGE_INTEGER size;
 	size.LowPart = attr.nFileSizeLow;
 	size.HighPart = attr.nFileSizeHigh;
 	return size.QuadPart;
@@ -411,7 +410,7 @@ inline size_type get_size (const wchar_t* name)
     WIN32_FILE_ATTRIBUTE_DATA attr;
     if (::GetFileAttributesExW (name, GetFileExInfoStandard, &attr))
     {
-	ULARGE_INTEGER size;
+	LARGE_INTEGER size;
 	size.LowPart = attr.nFileSizeLow;
 	size.HighPart = attr.nFileSizeHigh;
 	return size.QuadPart;
