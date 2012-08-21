@@ -28,10 +28,13 @@
 #define SYSATOMIC_HPP
 
 #include "bindata.h"
+#if SYSPP_MSC
+#include <intrin.h>
+#endif
 
 namespace sys {
 
-#ifdef _MSC_VER
+#if SYSPP_MSC || SYSPP_WIN32 && !SYSPP_GNUC && !SYSPP_CLANG
 typedef long atomic_type;
 #else
 typedef bin::int32_t atomic_type;
@@ -45,10 +48,14 @@ atomic_type atomic_add (volatile atomic_type& value, atomic_type increment);
 
 atomic_type atomic_swap (volatile atomic_type& value, atomic_type replacement);
 
+// atomically read value
+
+atomic_type atomic_get (volatile atomic_type& value);
+
 // ---------------------------------------------------------------------------
 // implementation
 
-#if defined(__GNUC__) && __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
+#if SYSPP_CLANG || SYSPP_GNUC && __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4
 
 inline atomic_type atomic_add (volatile atomic_type& value, atomic_type increment)
 {
@@ -60,7 +67,12 @@ inline atomic_type atomic_swap (volatile atomic_type& value, atomic_type replace
     return __sync_lock_test_and_set (&value, replacement);
 }
 
-#elif defined(__GNUC__) && defined(__i386__)
+inline atomic_type atomic_get (volatile atomic_type& value)
+{
+    return __sync_val_compare_and_swap (&value, 0, 0);
+}
+
+#elif SYSPP_GNUC && defined(__i386__)
 
 inline atomic_type atomic_add (volatile atomic_type& value, atomic_type increment)
 {
@@ -86,7 +98,19 @@ inline atomic_type atomic_swap (volatile atomic_type& value, atomic_type replace
     return result;
 }
 
-#elif defined(_MSC_VER)
+inline atomic_type atomic_get (volatile atomic_type& value)
+{
+    atomic_type result;
+    __asm__ __volatile__ (
+        "xor	%%eax, %%eax\n\t"
+	"lock\n\t"
+	"cmpxchg	%1, %0"
+	: "+m" (value), "=a" (result)
+    );
+    return result;
+}
+
+#elif SYSPP_MSC
 
 inline atomic_type atomic_add (volatile atomic_type& value, atomic_type increment)
 {
@@ -98,10 +122,16 @@ inline atomic_type atomic_swap (volatile atomic_type& value, atomic_type replace
     return _InterlockedExchange (&value, replacement);
 }
 
+inline atomic_type atomic_get (volatile atomic_type& value)
+{
+    return _InterlockedCompareExchange (&value, 0, 0);
+}
+
 #elif defined(_WIN32)
 
 extern "C" atomic_type __stdcall InterlockedExchangeAdd (volatile atomic_type*, atomic_type);
 extern "C" atomic_type __stdcall InterlockedExchange (volatile atomic_type*, atomic_type);
+extern "C" atomic_type __stdcall InterlockedCompareExchange (volatile atomic_type*, atomic_type, atomic_type);
 
 inline atomic_type atomic_add (volatile atomic_type& value, atomic_type increment)
 {
@@ -111,6 +141,11 @@ inline atomic_type atomic_add (volatile atomic_type& value, atomic_type incremen
 inline atomic_type atomic_swap (volatile atomic_type& value, atomic_type replacement)
 {
     return InterlockedExchange (&value, replacement);
+}
+
+inline atomic_type atomic_get (volatile atomic_type& value)
+{
+    return InterlockedCompareExchange (&value, 0, 0);
 }
 
 #else
@@ -129,6 +164,11 @@ inline atomic_type atomic_swap (volatile atomic_type& value, atomic_type replace
     atomic_type previous = value;
     value = replacement;
     return previous;
+}
+
+inline atomic_type atomic_get (volatile atomic_type& value)
+{
+    return value;
 }
 
 #endif
