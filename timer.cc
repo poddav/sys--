@@ -26,7 +26,7 @@
 
 #include "timer.hpp"
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(HAS_POSIX_CLOCK)
 
 const sys::timer::detail sys::timer::sys_info;
 
