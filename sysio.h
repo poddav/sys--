@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef SYSIO_H
-#define SYSIO_H
+#ifndef SYSPP_SYSIO_H
+#define SYSPP_SYSIO_H
 
 #include "syshandle.h"
 #include "sysstring.h"
@@ -189,6 +189,9 @@ namespace io {
     inline sys_mode		win_to_sys (win_iomode io_mode, win_createmode create_mode)
        	{ return win_mode (io_mode, create_mode); }
 
+    template<posix_mode mode>
+    inline sys_mode		posix_to_sys () { return posix_to_win<mode>(); }
+
     template<int mode>
     inline sys_mode		ios_to_sys ()
 	{
@@ -212,6 +215,9 @@ namespace io {
     inline sys_mode		posix_to_sys (posix_mode mode) { return mode; }
     inline sys_mode		win_to_sys (win_iomode io_mode, win_createmode create_mode)
        	{ return win_to_posix (win_mode (io_mode, create_mode)); }
+
+    template<posix_mode mode>
+    inline sys_mode		posix_to_sys () { return mode; }
 
     template<int mode>
     inline sys_mode		ios_to_sys ()
@@ -316,6 +322,9 @@ open_file (const CharT* filename, io::sys_mode mode,
 	   io::win_sharemode share = io::share_default)
 { return create_file (filename, mode, share); }
 
+inline bool close_file (raw_handle file)
+{ return detail::base_handle::close_handle (file); }
+
 #ifdef _WIN32
 
 inline raw_handle
@@ -382,4 +391,4 @@ seek_file (raw_handle file, std::streamoff offset, std::ios::seekdir dir)
 
 } // namespace sys
 
-#endif /* SYSIO_H */
+#endif /* SYSPP_SYSIO_H */
