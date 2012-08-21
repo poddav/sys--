@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef REFCOUNT_PTR_H
-#define REFCOUNT_PTR_H
+#ifndef SYS_REFCOUNT_PTR_H
+#define SYS_REFCOUNT_PTR_H
 
 #include "sysdef.h"
 #include "sysatomic.h"
@@ -166,4 +166,4 @@ inline T* get_pointer (const refcount_ptr<T>& p)
 
 } // namespace sys
 
-#endif /* REFCOUNT_PTR_H */
+#endif /* SYS_REFCOUNT_PTR_H */

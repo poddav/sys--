@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef MEMBUF_HPP
-#define MEMBUF_HPP
+#ifndef SYS_MEMBUF_HPP
+#define SYS_MEMBUF_HPP
 
 #include <ios>
 #include <streambuf>
@@ -419,4 +419,4 @@ open (const CharT* filename, std::ios::openmode mode, bool private_mode)
 
 } // namespace sys
 
-#endif /* MEMBUF_HPP */
+#endif /* SYS_MEMBUF_HPP */

@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef SYSENV_H
-#define SYSENV_H
+#ifndef SYSPP_ENV_H
+#define SYSPP_ENV_H
 
 #ifdef _WIN32
 #include <windows.h>
@@ -239,4 +239,4 @@ inline bool unset_env (const WChar* varname)
 
 } // namespace sys
 
-#endif /* SYSENV_H */
+#endif /* SYSPP_ENV_H */
