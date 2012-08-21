@@ -24,8 +24,8 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef WINMEM_HPP
-#define WINMEM_HPP
+#ifndef SYS_WINMEM_HPP
+#define SYS_WINMEM_HPP
 
 #include <cstddef>	// for std::size_t
 #include <windows.h>
@@ -66,6 +66,8 @@ public:
 	}
 
 private:
+    global (const global&); // not defined
+    global& operator= (const global&);
 
     HGLOBAL	m_handle;
 };
@@ -102,6 +104,8 @@ public:
 	}
 
 private:
+    local (const local&); // not defined
+    local& operator= (const local&);
 
     HLOCAL	m_handle;
 };
@@ -158,4 +162,4 @@ private:
 
 } } // namespace sys::mem
 
-#endif /* WINMEM_HPP */
+#endif /* SYS_WINMEM_HPP */
