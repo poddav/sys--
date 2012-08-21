@@ -50,7 +50,7 @@ open (sys::raw_handle file, mode_t mode, off_type file_size)
     if (!file_size)
     {
 	file_size = file::get_size (file);
-	if (file_size == file::invalid_size)
+	if (file_size == static_cast<off_type> (file::invalid_size))
 	    throw generic_error();
     }
     DWORD protect, map_access;
