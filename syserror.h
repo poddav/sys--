@@ -30,7 +30,10 @@
 #include "sysstring.h"
 #include <exception>
 #include <locale>
+#include <memory>
+#ifdef SYSPP_NO_CPP0X
 #include <boost/shared_ptr.hpp>
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -39,7 +42,21 @@
 
 namespace sys {
 
+#ifndef SYSPP_NO_CPP0X
+using std::shared_ptr;
+#else
 using boost::shared_ptr;
+#endif
+
+// work-around macros for mingw runtime bug
+
+#define SYS_THROW_GENERIC_ERROR(object) do {\
+    int __err = sys::error_info::get_last_error();\
+    throw sys::generic_error (__err, object); } while (0)
+
+#define SYS_THROW_FILE_ERROR(filename) do {\
+    int __err = sys::error_info::get_last_error();\
+    throw sys::file_error (__err, filename); } while (0)
 
 class error_info
 {
@@ -131,6 +148,10 @@ public:
     explicit generic_error (int errnum) : m_info (new error_info (errnum)) { }
 
     template <typename CharT>
+    generic_error (int errnum, const CharT* object) : m_info (new error_info (errnum))
+        { m_info->get_object().assign (object); }
+
+    template <typename CharT>
     explicit generic_error (const CharT* object)
 	: m_info (new error_info (object))
        	{ }
@@ -179,6 +200,9 @@ class file_error : public generic_error
 public:
     template <typename CharT>
     explicit file_error (const CharT* filename) : generic_error (filename) { }
+
+    template <typename CharT>
+    file_error (int error, const CharT* filename) : generic_error (error, filename) { }
 
     template <typename Ch, typename Tr, typename Al>
     explicit file_error (const basic_string<Ch,Tr,Al>& filename)
