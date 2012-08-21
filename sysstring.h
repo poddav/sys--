@@ -73,7 +73,7 @@ typedef char16_t WChar16;
 typedef __CHAR16_TYPE__ WChar16;
 #define _U16(STR)	u##STR
 #else
-typedef int16_t  WChar16;
+typedef uint16_t WChar16;
 #define _U16(STR)	STR
 #endif
 
@@ -87,7 +87,7 @@ typedef char32_t WChar32;
 typedef __CHAR32_TYPE__ WChar32;
 #define _U32(STR)	U##STR
 #else
-typedef int32_t  WChar32;
+typedef uint32_t WChar32;
 #define _U32(STR)	STR
 #endif
 
@@ -102,6 +102,14 @@ typedef basic_string<WChar32>	u32string; // UTF-32 string
 typedef wstring	    tstring;
 #else
 typedef string	    tstring;
+#endif
+
+#if !defined(_WIN32) && !defined(TEXT)
+#if defined(UNICODE) || defined(_UNICODE)
+#define TEXT(str) L##str
+#else
+#define TEXT(str) str
+#endif
 #endif
 
 static const UChar32 replacement_code_point = 0xfffd; // code point for invalid characters
@@ -420,17 +428,14 @@ inline int u32tou8 (const u32string& src, string& dst)
 /// \class local_buffer
 /// \brief Buffer that uses stack for small allocations and dynamic memory for larger ones.
 
-template <class T>
+template <class T, size_t default_size = ((255 - sizeof(T*)*2) / sizeof(T) + 1)>
 class local_buffer
 {
 public:
     typedef T		value_type;
     typedef size_t	size_type;
-
-    enum {
-	// for large types, reduce size of stack-allocated array
-	default_size = (255 - sizeof(value_type*)*2) / sizeof(T) + 1
-    };
+    typedef T*          iterator;
+    typedef const T*    const_iterator;
 
     local_buffer () : m_size (default_size) { m_ptr = m_buf; }
 
@@ -468,8 +473,11 @@ public:
     value_type* get () { return m_ptr; }
     const value_type* get () const { return m_ptr; }
 
-    value_type* begin () { return m_ptr; }
-    value_type* end   () { return m_ptr + m_size; }
+    iterator begin () { return m_ptr; }
+    iterator end   () { return m_ptr + m_size; }
+
+    const_iterator begin () const { return m_ptr; }
+    const_iterator end   () const { return m_ptr + m_size; }
 
     value_type& operator[] (std::ptrdiff_t i) { return m_ptr[i]; }
     const value_type& operator[] (std::ptrdiff_t i) const { return m_ptr[i]; }
