@@ -26,21 +26,26 @@
 // IN THE SOFTWARE.
 //
 
-#ifndef BINDATA_H
-#define BINDATA_H
+#ifndef SYS_BINDATA_H
+#define SYS_BINDATA_H
 
+#include "sysdef.h"
 #include <climits>		// for ULONG_MAX
 #include <boost/cstdint.hpp>	// for intXX_t types
 #include <boost/static_assert.hpp>
 #if HAVE_SYS_PARAM_H
 #include <sys/param.h>		// for BYTE_ORDER macro
 #endif
-#ifdef _MSC_VER
-#include <intrin.h>		// MS Visual C endian-hanlding functions
+#if SYSPP_MSC
+#include <intrin.h>		// MS Visual C intinsic functions
 #endif
 #include <algorithm>		// for std::iter_swap
 
-#if defined(BYTE_ORDER) && defined(LITTLE_ENDIAN)
+#if defined(__BYTE_ORDER__) && defined (__ORDER_LITTLE_ENDIAN__)
+#   if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+#       define SYSPP_BIGENDIAN 1
+#   endif
+#elif defined(BYTE_ORDER) && defined(LITTLE_ENDIAN)
 #   if BYTE_ORDER != LITTLE_ENDIAN
 #	define SYSPP_BIGENDIAN 1
 #   endif
@@ -57,22 +62,33 @@ using boost::uint16_t;
 using boost::uint32_t;
 using boost::uint64_t;
 
+inline SYSPP_constexpr bool is_big_endian ()
+{
+#ifdef SYSPP_BIGENDIAN
+    return true;
+#else
+    return false;
+#endif
+}
+
+inline SYSPP_constexpr bool is_little_endian ()
+    { return !is_big_endian(); }
+
 /// swap bytes in 16-bit word
 
 inline uint16_t
 swap_word (uint16_t w)
 {
-#if defined(__i386__) && defined(__GNUC__)
+#if SYSPP_GNUC > 40700
+    return __builtin_bswap16 (w);
+#elif SYSPP_MSC
+    return _byteswap_ushort (w);
+#elif SYSPP_GNUC && defined(__i386__)
     __asm__ ("xchg	%b0, %h0\n\t"
 	     : "=q" (w)
 	     :  "0" (w));
     return (w);
-#elif defined(_MSC_VER)
-    return _byteswap_ushort (w);
 #else
-//    uint8_t* pw = reinterpret_cast<uint8_t*> (&w);
-//    std::iter_swap (pw, pw + 1);
-//    return (w);
     return w >>8 | (w &0xff) <<8;
 #endif
 }
@@ -88,18 +104,14 @@ swap_word (int16_t w)
 inline uint32_t
 swap_dword (uint32_t dw)
 {
-#if defined(_MSC_VER)
-    return _byteswap_ulong (dw);
-#elif defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+#if SYSPP_GNUC >= 40300
     return __builtin_bswap32 (dw);
-#elif defined(__GNUC__) && defined(__i386__)
+#elif SYSPP_MSC
+    return _byteswap_ulong (dw);
+#elif SYSPP_GNUC && defined(__i386__)
     __asm__ ("bswap	%0" : "+r" (dw));
     return (dw);
 #else
-//    uint8_t* pdw = reinterpret_cast<uint8_t*> (&dw);
-//    std::iter_swap (pdw,     pdw + 3);
-//    std::iter_swap (pdw + 1, pdw + 2);
-//    return (dw);
     return (dw &0xff) <<24 | (dw &0xff00) <<8 | (dw >>8) &0xff00 | (dw >>24) &0xff;
 #endif
 }
@@ -115,9 +127,9 @@ swap_dword (int32_t w)
 inline uint64_t
 swap_qword (uint64_t qw)
 {
-#if defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+#if SYSPP_GNUC >= 40300
     return __builtin_bswap64 (qw);
-#elif defined(_MSC_VER)
+#elif SYSPP_MSC
     return _byteswap_uint64 (qw);
 #else
     uint8_t* pqw = reinterpret_cast<uint8_t*> (&qw);
@@ -265,6 +277,14 @@ struct bigendian_convert
     result_type operator() (argument_type x) const;
 };
 
+template <typename IntT>
+struct endian_swap
+{
+    typedef IntT argument_type;
+    typedef IntT result_type;
+    result_type operator() (argument_type x) const;
+};
+
 template<>
 inline int8_t litendian_convert<int8_t>::operator() (int8_t x) const
 { return (x); }
@@ -329,6 +349,38 @@ template<>
 inline uint64_t bigendian_convert<uint64_t>::operator() (uint64_t x) const
 { return big_qword (x); }
 
+template<>
+inline int8_t endian_swap<int8_t>::operator() (int8_t x) const
+{ return (x); }
+
+template<>
+inline int16_t endian_swap<int16_t>::operator() (int16_t x) const
+{ return swap_word (x); }
+
+template<>
+inline int32_t endian_swap<int32_t>::operator() (int32_t x) const
+{ return swap_dword (x); }
+
+template<>
+inline int64_t endian_swap<int64_t>::operator() (int64_t x) const
+{ return swap_qword (x); }
+
+template<>
+inline uint8_t endian_swap<uint8_t>::operator() (uint8_t x) const
+{ return (x); }
+
+template<>
+inline uint16_t endian_swap<uint16_t>::operator() (uint16_t x) const
+{ return swap_word (x); }
+
+template<>
+inline uint32_t endian_swap<uint32_t>::operator() (uint32_t x) const
+{ return swap_dword (x); }
+
+template<>
+inline uint64_t endian_swap<uint64_t>::operator() (uint64_t x) const
+{ return swap_qword (x); }
+
 // ---------------------------------------------------------------------------
 // bit scan functions
 
@@ -337,10 +389,10 @@ inline uint64_t bigendian_convert<uint64_t>::operator() (uint64_t x) const
 ///	    position, or ULONG_MAX if there's no 1-bits in MASK.
 inline unsigned long bit_scan_msb (uint32_t mask)
 {
-#ifdef _MSC_VER
+#if SYSPP_MSC
     unsigned long index;
     return _BitScanReverse (&index, mask)? (31-index): ULONG_MAX;
-#elif defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+#elif SYSPP_GNUC >= 40300
     return mask? __builtin_clz (mask): ULONG_MAX;
 #else
     if (!mask)
@@ -354,10 +406,10 @@ inline unsigned long bit_scan_msb (uint32_t mask)
 
 inline unsigned long bit_scan_msb (uint64_t mask)
 {
-#if defined(_MSC_VER) && (defined(_M_IA64) || defined(_M_AMD64))
+#if SYSPP_MSC && (defined(_M_IA64) || defined(_M_AMD64))
     unsigned long index;
     return _BitScanReverse64 (&index, mask)? (63-index): ULONG_MAX;
-#elif defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
+#elif SYSPP_GNUC >= 40300
     return mask? __builtin_clzll (mask): ULONG_MAX;
 #else
     unsigned long index = ULONG_MAX;
@@ -387,4 +439,4 @@ inline unsigned long bit_scan_msb (uint16_t mask)
 
 } // namespace bin
 
-#endif /* BINDATA_H */
+#endif /* SYS_BINDATA_H */
