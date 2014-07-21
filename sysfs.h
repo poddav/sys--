@@ -338,7 +338,7 @@ inline time get_mod_time (const char* name)
     if (-1 != ::stat (name, &buf))
 	return time (buf.st_mtime);
 #endif
-    throw file_error (name);
+    SYS_THROW_FILE_ERROR (name);
 }
 
 #ifdef _WIN32
@@ -346,7 +346,7 @@ inline time get_mod_time (const wchar_t* name)
 {
     WIN32_FILE_ATTRIBUTE_DATA attr;
     if (!::GetFileAttributesExW (name, GetFileExInfoStandard, &attr))
-	throw file_error (name);
+	SYS_THROW_FILE_ERROR (name);
     return time (attr.ftLastWriteTime);
 }
 #else
@@ -354,7 +354,7 @@ inline time get_mod_time (const wstring& name)
 {
     string cname;
     if (!wcstombs (name, cname))
-	throw file_error (name.c_str());
+	SYS_THROW_FILE_ERROR (name.c_str());
     return get_mod_time (cname.c_str());
 }
 #endif

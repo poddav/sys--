@@ -28,6 +28,7 @@
 #define SYS_WINMEM_HPP
 
 #include <cstddef>	// for std::size_t
+#include "syserror.h"
 #include <windows.h>
 
 namespace sys { namespace mem {
@@ -140,12 +141,12 @@ public:
     explicit lock (mem_type& hmem)
 	: m_handle (hmem.handle())
        	, m_ptr (static_cast<T*> (this->Lock (m_handle)))
-	{ if (!m_ptr) throw sys::generic_error(); }
+	{ if (!m_ptr) SYS_THROW_SYSTEM_ERROR(); }
 
     explicit lock (HANDLE hmem)
 	: m_handle (hmem)
        	, m_ptr (static_cast<T*> (this->Lock (m_handle)))
-	{ if (!m_ptr) throw sys::generic_error(); }
+	{ if (!m_ptr) SYS_THROW_SYSTEM_ERROR(); }
 
     ~lock () { this->Unlock (m_handle); }
 

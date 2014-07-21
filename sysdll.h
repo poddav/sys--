@@ -65,8 +65,7 @@ public:
     operator void*() const { return lib; }
     bool operator! () const { return !lib; }
 
-    proc_type	get_proc (const char* symbol);
-    proc_type	get_proc (const WChar* symbol);
+    proc_type	get_proc (const char* symbol) const;
     
     module_type	get_handle () const { return lib; }
     void	close ();
@@ -93,8 +92,7 @@ public:
     operator void*() const { return this->lib; }
     bool operator! () const { return !this->lib; }
 
-    template <typename char_type>
-    proc_type	get_proc (const char_type* symbol);
+    proc_type	get_proc (const char* symbol) const;
 
     using library::get_handle;
     using library::close;
@@ -130,20 +128,14 @@ close ()
 inline proc_type library::
 get_proc (const char* symbol)
 {
-    return lib? ::GetProcAddressA (lib, symbol): 0;
-}
-
-inline proc_type library::
-get_proc (const WChar* symbol)
-{
-    return lib? ::GetProcAddressW (lib, symbol): 0;
+    return lib? ::GetProcAddress (lib, symbol): 0;
 }
 
 template <typename char_type> inline library_throw::
 library_throw (const char_type* name)
     : library (name)
 {
-    if (!lib) throw sys::generic_error (name);
+    if (!lib) SYS_THROW_GENERIC_ERROR (name);
 }
 
 template <typename char_type>
@@ -152,7 +144,7 @@ get_proc (const char_type* symbol)
 {
     proc_type proc = library::get_proc (symbol);
     if (!proc)
-	throw sys::generic_error (symbol);
+	SYS_THROW_GENERIC_ERROR (symbol);
     return proc;
 }
 
@@ -192,7 +184,7 @@ library_throw (const char_type* name)
     : library (name)
 {
     if (!this->lib)
-       	throw sys::generic_error (name, ::dlerror());
+       	SYS_THROW_GENERIC_ERROR (name, ::dlerror());
 }
 
 inline proc_type library_throw::
@@ -200,7 +192,7 @@ get_proc (const char* symbol)
 {
     proc_type proc = library::get_proc (symbol);
     if (!proc)
-	throw sys::generic_error (symbol, ::dlerror());
+	SYS_THROW_GENERIC_ERROR (symbol, ::dlerror());
 }
 
 #endif

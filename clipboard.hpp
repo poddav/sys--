@@ -43,7 +43,7 @@ public:
     explicit clipboard (HWND new_owner = 0)
 	{
 	    if (!::OpenClipboard (new_owner))
-		throw sys::generic_error();
+		SYS_THROW_SYSTEM_ERROR();
 	}
 
     ~clipboard () { ::CloseClipboard(); }

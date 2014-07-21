@@ -45,7 +45,7 @@ namespace sys {
 
 #ifdef _WIN32
 
-class DLLIMPORT timer
+class SYSPP_DLLIMPORT timer
 {
 public:
     typedef boost::uint64_t clock_t;
@@ -55,7 +55,7 @@ public:
     timer ()
 	{
 	    if (!sys_info.sys_freq)
-		throw generic_error ("high-resolution timer not available");
+		SYS_THROW_GENERIC_ERROR ("high-resolution timer not available");
 	    detail::query (_start_time);
 	}
 
@@ -82,7 +82,7 @@ public:
 	{ return 1.0/double(sys_info.sys_freq); }
 
 private:
-    struct DLLIMPORT detail
+    struct SYSPP_DLLIMPORT detail
     {
 	clock_t sys_freq;
 
@@ -100,7 +100,7 @@ private:
 
 #elif HAS_POSIX_CLOCK
 
-class DLLIMPORT timer
+class SYSPP_DLLIMPORT timer
 {
 public:
     typedef struct timespec clock_t;
@@ -110,7 +110,7 @@ public:
     timer ()
 	{
 	    if (!sys_info.sys_res.tv_nsec)
-		throw generic_error ("high-resolution timer not available");
+		SYS_THROW_GENERIC_ERROR ("high-resolution timer not available");
 	    detail::query (_start_time);
 	}
 
@@ -139,7 +139,7 @@ public:
 	{ return sys_info.sys_res.tv_nsec / 1e9; }
 
 private:
-    struct DLLIMPORT detail
+    struct SYSPP_DLLIMPORT detail
     {
 	clock_t	    sys_res;
 

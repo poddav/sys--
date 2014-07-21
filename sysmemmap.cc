@@ -51,7 +51,7 @@ open (sys::raw_handle file, mode_t mode, off_type file_size)
     {
 	file_size = file::get_size (file);
 	if (file_size == static_cast<off_type> (file::invalid_size))
-	    throw generic_error();
+            SYS_THROW_SYSTEM_ERROR();
     }
     DWORD protect, map_access;
     switch (mode)
@@ -61,10 +61,11 @@ open (sys::raw_handle file, mode_t mode, off_type file_size)
     case write:	protect = PAGE_READWRITE; map_access = FILE_MAP_WRITE; break;
     case copy:	protect = PAGE_WRITECOPY; map_access = FILE_MAP_COPY; break;
     }
-    DWORD szlo = file_size & static_cast<DWORD> (-1);
-    DWORD szhi = static_cast<DWORD> (file_size >> 32);
-    sys::handle backend (::CreateFileMapping (file, NULL, protect, szhi, szlo, NULL));
-    if (!backend) throw generic_error();
+    ULARGE_INTEGER sz;
+    sz.QuadPart = file_size;
+    sys::handle backend (::CreateFileMapping (file, NULL, protect, sz.HighPart, sz.LowPart, NULL));
+    if (!backend)
+        SYS_THROW_SYSTEM_ERROR();
 
     impl.reset (new detail::map_impl (backend, file_size, map_access));
 }
@@ -77,11 +78,12 @@ open (sys::raw_handle file, mode_t mode, off_type file_size)
     if (!file_size)
     {
 	file_size = file::get_size (file);
-	if (file_size == file::invalid_size)
-	    throw generic_error();
+	if (file::invalid_size == file_size)
+	    SYS_THROW_SYSTEM_ERROR();
     }
     sys::handle backend (::dup (file));
-    if (!backend) throw generic_error();
+    if (!backend)
+        SYS_THROW_SYSTEM_ERROR();
 
     impl.reset (new detail::map_impl (backend, file_size, mode));
 }

@@ -50,6 +50,10 @@ using boost::shared_ptr;
 
 // work-around macros for mingw runtime bug
 
+#define SYS_THROW_SYSTEM_ERROR() do {\
+    int __err = sys::error_info::get_last_error();\
+    throw sys::generic_error (__err); } while (0)
+
 #define SYS_THROW_GENERIC_ERROR(object) do {\
     int __err = sys::error_info::get_last_error();\
     throw sys::generic_error (__err, object); } while (0)
@@ -110,7 +114,7 @@ public:
     uni_string& get_custom_message () { return m_custom_message; }
 
 private:
-    DLLIMPORT void set_system_message();
+    SYSPP_DLLIMPORT void set_system_message();
 
     template <typename CharT>
     void make_what ();
