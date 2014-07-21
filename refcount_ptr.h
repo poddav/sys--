@@ -36,9 +36,9 @@
 
 namespace sys {
 
-class DLLIMPORT refcount_base
+class SYSPP_DLLIMPORT refcount_base
 {
-    volatile sys::atomic_type	ref_count;
+    mutable volatile sys::atomic_type ref_count;
 
     template<typename T> friend class refcount_ptr;
 
@@ -51,7 +51,7 @@ public:
 //  Requirements: For ptr of type T*, ptr->ref_count must be initialized to 0
 
 template<typename T>
-class DLLIMPORT refcount_ptr
+class SYSPP_DLLIMPORT refcount_ptr
 {
     T*		ptr;
 
@@ -68,11 +68,18 @@ public:
     refcount_ptr (const refcount_ptr& other) : ptr (other.ptr)
        	{ if (ptr) sys::atomic_add (ptr->ref_count, 1); }
 
+    refcount_ptr (refcount_ptr&& other) : ptr (other.ptr)
+        { other.ptr = 0; }
+
     ~refcount_ptr () { dispose(); }
 
     template<typename U>
     refcount_ptr (const refcount_ptr<U>& r) : ptr (r.ptr)
        	{ if (ptr) sys::atomic_add (ptr->ref_count, 1); }
+
+    template<typename U>
+    refcount_ptr (refcount_ptr<U>&& other) : ptr (other.ptr)
+        { other.ptr = 0; }
 
 #if SYSPP_REFCOUNT_PTR_USE_AUTO_PTR
     template<typename U>
@@ -98,12 +105,35 @@ public:
 	    return *this;
 	}
 
+    refcount_ptr& operator= (refcount_ptr&& r)
+        {
+	    if (ptr != r.ptr)
+	    {
+		dispose();
+		ptr = r.ptr;
+		r.ptr = 0;
+	    }
+            return *this;
+        }
+
     template<typename U>
     refcount_ptr& operator= (const refcount_ptr<U>& r)
 	{
 	    share (r.ptr);
 	    return *this;
 	}
+
+    template<typename U>
+    refcount_ptr& operator= (refcount_ptr<U>&& r)
+        {
+	    if (ptr != r.ptr)
+	    {
+		dispose();
+		ptr = r.ptr;
+		r.ptr = 0;
+	    }
+            return *this;
+        }
 
     bool operator< (const refcount_ptr& other) const { return ptr < other.ptr; }
 
