@@ -35,7 +35,6 @@ close ()
 	return NULL;
 
     m_view.unmap();
-    m_map.close();
     setg (0, 0, 0);
     setp (0, 0);
     return this;
@@ -107,14 +106,14 @@ m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode mode)
 	    offset += cur_pos;
 	    break;
 	}
-    case std::ios::end: offset += m_map.size(); break;
+    case std::ios::end: offset += this->map_size(); break;
     }
     if (offset < 0)
 	offset = 0;
     else
-	offset = std::min<off_type> (offset, m_map.size());
+	offset = std::min<off_type> (offset, this->map_size());
     off_type pos = offset - m_offset;
-    if (pos >= 0 && pos <= m_view.size())
+    if (gptr() && pos >= 0 && pos <= m_view.size())
     {
 	m_setg_ex (pos);
 	m_setp_ex (pos);
@@ -164,7 +163,7 @@ underflow ()
 	return traits_type::to_int_type (*gptr());
 
     off_type view_size = egptr() - eback();
-    if (m_offset < m_map.size() - view_size)
+    if (m_offset < static_cast<mapping::off_type> (this->map_size() - view_size))
     {
 	m_offset += view_size;
 	m_remap();
@@ -186,7 +185,7 @@ overflow (int_type c)
     if (pptr() == epptr())
     {
 	m_offset += epptr() - pbase();
-	if (m_offset >= m_map.size())
+	if (m_offset >= this->map_size())
 	{
 	    setp (0, 0);
 	    setg (0, 0, 0);
@@ -208,7 +207,7 @@ xsputn (const char_type* buf, std::streamsize size)
     if (size > static_cast<std::streamsize> (epptr() - pptr()))
     {
 	m_offset += pptr() - pbase();
-	if (m_offset >= m_map.size())
+	if (m_offset >= this->map_size())
 	{
 	    setp (0, 0);
 	    setg (0, 0, 0);

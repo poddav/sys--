@@ -63,14 +63,22 @@ public: // methods
     explicit basic_memory_buf (std::ios::openmode mode)
        	: m_mode (mode)
 	{ }
-    basic_memory_buf (const char_type* in, size_type sz, std::ios::openmode mode)
-	: m_mode (mode)
+    basic_memory_buf (const char_type* in, size_type sz)
+	: m_mode (std::ios::in)
 	{ this->setbuf (const_cast<char_type*> (in), sz); }
+    basic_memory_buf (char_type* in, size_type sz, std::ios::openmode mode)
+	: m_mode (mode)
+	{ this->setbuf (in, sz); }
 
     template <size_t N>
-    basic_memory_buf (const char_type (&ary)[N], std::ios::openmode mode)
-	: m_mode (mode)
+    explicit basic_memory_buf (const char_type (&ary)[N])
+	: m_mode (std::ios::in)
 	{ this->setbuf (const_cast<char_type*> (ary), N); }
+
+    template <size_t N>
+    explicit basic_memory_buf (char_type (&ary)[N], std::ios::openmode mode)
+	: m_mode (mode)
+	{ this->setbuf (ary, N); }
 
     /// gdata() and gsize() return remaining portion of the GET sequence
     const char_type* gdata () const { return this->gptr(); }
@@ -100,13 +108,13 @@ protected: // virtual methods
 	    // epptr() always points to its end, no matter what i/o mode
 	    // specified for the buffer.
 	    if (m_mode & std::ios::in)
-		setg (s, s, s+n);
+		this->setg (s, s, s+n);
 	    else
-		setg (s, s, s);
+		this->setg (s, s, s);
 	    if (m_mode & std::ios::out)
-		setp (s, s+n);
+		this->setp (s, s+n);
 	    else
-		setp (s+n, s+n);
+		this->setp (s+n, s+n);
 	    return this;
        	}
 
@@ -187,7 +195,7 @@ protected: // data
 /// \class mapped_buf
 /// \brief stream buffer on top of the memory mapped file.
 
-class DLLIMPORT mapped_buf : public std::streambuf
+class SYSPP_DLLIMPORT mapped_buf : public std::streambuf
 {
 public: // types
 
@@ -197,13 +205,34 @@ public: // types
     typedef traits_type::pos_type 		pos_type;
     typedef traits_type::off_type 		off_type;
     typedef mapping::size_type			size_type;
+    typedef mapping::view<char_type>            view_type;
 
 public: // methods
 
-    mapped_buf () : m_map (), m_offset (0) { }
+    mapped_buf () : m_offset (0) { }
+    mapped_buf (const mapped_buf& other) : std::streambuf(), m_offset (other.m_offset)
+        { m_view.bind (other.m_view); }
+    explicit mapped_buf (const mapping::map_base& map) : m_offset (0)
+        { m_view.bind (map); }
+    template <typename T>
+    explicit mapped_buf (const mapping::map_base::view<T>& view) : m_offset (0)
+        { m_view.bind (view); }
+
     virtual ~mapped_buf () { close(); }
 
-    bool is_open () const { return m_map.is_open(); }
+    mapped_buf& operator= (const mapped_buf& other)
+        {
+            if (&other != this)
+            {
+                setg (0, 0, 0);
+                setp (0, 0);
+                m_view.bind (other.m_view);
+                m_offset = other.m_offset;
+            }
+            return *this;
+        }
+
+    bool is_open () const { return m_view.is_bound(); }
 
     template<typename CharT>
     mapped_buf* open (const CharT* filename, std::ios::openmode mode,
@@ -250,7 +279,7 @@ public: // additional convenient methods
 
     /// map_size()
     /// \return size of the underlying memory map object.
-    size_type map_size () const { return m_map.size(); }
+    size_type map_size () const { return m_view.max_offset(); }
 
 private: // methods
 
@@ -279,15 +308,14 @@ private: // methods
 	}
     void m_remap (size_type sz = 0)
 	{
-	    m_view.remap (m_map, m_offset, std::max (sz, page_size()));
+	    m_view.remap (m_offset, std::max (sz, page_size()));
 	    m_reset();
 	}
 
 private: // data
 
-    mapped_file			    m_map;
-    mapped_file::view<char_type>    m_view;
-    mapping::off_type		    m_offset; // offset of eback() within m_map
+    view_type           m_view;
+    mapping::off_type	m_offset; // offset of eback() within m_view
 };
 
 // ---------------------------------------------------------------------------
@@ -314,7 +342,7 @@ m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode mode)
 	    goffset = 0;
 	else if (goffset > seq_size)
 	    goffset = seq_size;
-	setg (this->eback(), this->eback() + goffset, this->egptr());
+	this->setg (this->eback(), this->eback() + goffset, this->egptr());
 	result = goffset;
     }
     if (mode & std::ios::out)
@@ -333,8 +361,8 @@ m_seek (off_type offset, std::ios::seekdir way, std::ios::openmode mode)
 	    offset = 0;
 	else if (offset > seq_size)
 	    offset = seq_size;
-	setp (this->pbase(), this->epptr());
-	pbump (offset);
+	this->setp (this->pbase(), this->epptr());
+	this->pbump (offset);
 	result = offset;
     }
     return result;
@@ -388,7 +416,7 @@ xsputn (const char_type* buf, std::streamsize size)
     if (size > static_cast<std::streamsize> (this->epptr() - this->pptr()))
     {
 	size_type cur_size = this->epptr() - this->pbase();
-	m_grow (std::max<size_type> (cur_size + GROW_SIZE, this->psize() + size));
+	m_grow (this->psize() + size + GROW_SIZE);
     }
     traits_type::copy (this->pptr(), buf, size);
     this->pbump (size);
@@ -410,7 +438,9 @@ open (const CharT* filename, std::ios::openmode mode, bool private_mode)
 	    : mapping::write
 	    : mapping::read;
 
-    m_map.open (filename, mapmode);
+    mapped_file map (filename, mapmode);
+    m_view.bind (map);
+    
     m_offset = 0;
     setg (0, 0, 0);
     setp (0, 0);
