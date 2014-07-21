@@ -79,7 +79,7 @@ inline SYSPP_constexpr bool is_little_endian ()
 inline uint16_t
 swap_word (uint16_t w)
 {
-#if SYSPP_GNUC > 40700
+#if SYSPP_GNUC > 40700 && SYSPP_GNUC < 40702
     return __builtin_bswap16 (w);
 #elif SYSPP_MSC
     return _byteswap_ushort (w);
@@ -261,6 +261,32 @@ big_qword (int64_t qw)
 // ---------------------------------------------------------------------------
 // conversion functors
 
+namespace detail
+{
+    template <size_t N>
+    struct endian_swap_helper
+    {
+        template <typename IntT>
+        IntT operator() (IntT x) const;
+    };
+
+    template<> template <typename IntT>
+    inline IntT endian_swap_helper<1>:: operator() (IntT x) const
+    { return x; }
+
+    template<> template <typename IntT>
+    inline IntT endian_swap_helper<2>:: operator() (IntT x) const
+    { return swap_word (static_cast<uint16_t> (x)); }
+
+    template<> template <typename IntT>
+    inline IntT endian_swap_helper<4>:: operator() (IntT x) const
+    { return swap_dword (static_cast<uint32_t> (x)); }
+
+    template<> template <typename IntT>
+    inline IntT endian_swap_helper<8>:: operator() (IntT x) const
+    { return swap_qword (static_cast<uint64_t> (x)); }
+} // namespace detail
+
 template <typename IntT>
 struct litendian_convert
 {
@@ -278,11 +304,11 @@ struct bigendian_convert
 };
 
 template <typename IntT>
-struct endian_swap
+struct endian_swap : public detail::endian_swap_helper<sizeof (IntT)>
 {
     typedef IntT argument_type;
     typedef IntT result_type;
-    result_type operator() (argument_type x) const;
+//    result_type operator() (argument_type x) const;
 };
 
 template<>
@@ -349,6 +375,7 @@ template<>
 inline uint64_t bigendian_convert<uint64_t>::operator() (uint64_t x) const
 { return big_qword (x); }
 
+#if 0
 template<>
 inline int8_t endian_swap<int8_t>::operator() (int8_t x) const
 { return (x); }
@@ -380,6 +407,7 @@ inline uint32_t endian_swap<uint32_t>::operator() (uint32_t x) const
 template<>
 inline uint64_t endian_swap<uint64_t>::operator() (uint64_t x) const
 { return swap_qword (x); }
+#endif
 
 // ---------------------------------------------------------------------------
 // bit scan functions
