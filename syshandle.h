@@ -74,7 +74,7 @@ namespace detail {
 } // namespace detail
 
 template <long invalid_handle_value, class BaseHandle = detail::base_handle>
-class DLLIMPORT generic_handle : private BaseHandle
+class SYSPP_DLLIMPORT generic_handle : private BaseHandle
 {
 public:
     typedef raw_handle	handle_type;
