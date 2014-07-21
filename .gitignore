@@ -10,8 +10,9 @@
 *.opensdf
 *test*
 text*
-Build
-ipch
-doc
+Build/*
+ipch/*
+doc/*
+git-push.cmd
 *~
 *;*
