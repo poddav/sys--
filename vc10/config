@@ -1,0 +1,9 @@
+Configuration		Output		    Import library	    Compiler Flags
+LIB_CRTLIB_Debug	sys++mt_debug.lib			    /MTd
+LIB_CRTLIB_Release	sys++mt.lib				    /MT
+LIB_CRTDLL_Debug	sys++md_debug.lib			    /MDd
+LIB_CRTDLL_Release	sys++md.lib				    /MD
+DLL_CRTLIB_Debug	sys++mt_debug.dll   sys++mt_debugimp.dll    /MTd
+DLL_CRTLIB_Release	sys++mt.dll         sys++mtimp.lib	    /MT
+DLL_CRTDLL_Debug	sys++md_debug.dll   sys++md_debugimp.lib    /MDd
+DLL_CRTDLL_Release	sys++md.dll         sys++mdimp.lib	    /MD
