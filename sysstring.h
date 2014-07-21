@@ -152,19 +152,19 @@ inline size_t u16len (const WChar* str)
 // mbslen (STR)
 /// \return length, in characters, of the null-terminated UTF-8 multibyte character
 ///	    sequence STR.
-DLLIMPORT size_t mbslen (const char* str);
+SYSPP_DLLIMPORT size_t mbslen (const char* str);
 
 // mbslen (STR, SIZE)
 //! \return number of characters in the UTF-8 multibyte character sequence STR.
 //!	    Sequence is limited to SIZE bytes.
-DLLIMPORT size_t mbslen (const char* str, size_t byte_len);
+SYSPP_DLLIMPORT size_t mbslen (const char* str, size_t byte_len);
 
 #ifdef _WIN32
 
 namespace detail {
 
-DLLIMPORT int wcstombs (const wstring& wstr, string& cstr, unsigned codepage);
-DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage);
+SYSPP_DLLIMPORT int wcstombs (const wstring& wstr, string& cstr, unsigned codepage);
+SYSPP_DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage);
 
 } // namespace detail
 

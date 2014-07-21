@@ -37,7 +37,7 @@ namespace sys {
 
 namespace detail {
 
-DLLIMPORT int wcstombs (const wstring& wstr, string& cstr, unsigned codepage)
+SYSPP_DLLIMPORT int wcstombs (const wstring& wstr, string& cstr, unsigned codepage)
 {
     cstr.clear();
     if (wstr.empty()) return 0;
@@ -59,10 +59,10 @@ DLLIMPORT int wcstombs (const wstring& wstr, string& cstr, unsigned codepage)
 	if (!count) return 0;
     }
     cstr.assign (cbuf.get(), count);
-    return std::min (wstr.size(), cstr.size());
+    return count;
 }
 
-DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage)
+SYSPP_DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage)
 {
     wstr.clear();
     if (cstr.empty()) return 0;
@@ -84,14 +84,14 @@ DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr, unsigned codepage)
 	if (!count) return 0;
     }
     wstr.assign (wbuf.get(), count);
-    return wstr.size();
+    return count;
 }
 
 } // namespace detail
 
 #elif 0 // not used
 
-DLLIMPORT int wcstombs (const wstring& wstr, string& cstr)
+SYSPP_DLLIMPORT int wcstombs (const wstring& wstr, string& cstr)
 {
     mbstate_t mbstate;
     std::memset (&mbstate, 0, sizeof(mbstate));
@@ -113,7 +113,7 @@ DLLIMPORT int wcstombs (const wstring& wstr, string& cstr)
     return count;
 }
 
-DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr)
+SYSPP_DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr)
 {
     mbstate_t mbstate;
     std::memset (&mbstate, 0, sizeof(mbstate));
@@ -142,7 +142,7 @@ DLLIMPORT int mbstowcs (const string& cstr, wstring& wstr)
 
 #endif // _WIN32
 
-DLLIMPORT size_t mbslen (const char* str)
+SYSPP_DLLIMPORT size_t mbslen (const char* str)
 {
     size_t len = 0;
     for (; *str; ++str)
@@ -152,7 +152,7 @@ DLLIMPORT size_t mbslen (const char* str)
     return len;
 }
 
-DLLIMPORT size_t mbslen (const char* str, size_t byte_len)
+SYSPP_DLLIMPORT size_t mbslen (const char* str, size_t byte_len)
 {
     size_t len = 0;
     for (; byte_len; --byte_len)

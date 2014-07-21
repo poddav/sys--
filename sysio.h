@@ -143,8 +143,8 @@ namespace io {
 
     // run-time mode conversion
 
-    DLLIMPORT win_mode		posix_to_win (posix_mode);
-    DLLIMPORT posix_mode	win_to_posix (win_mode);
+    SYSPP_DLLIMPORT win_mode		posix_to_win (posix_mode);
+    SYSPP_DLLIMPORT posix_mode	win_to_posix (win_mode);
 
     // compile-time mode conversion
 
@@ -238,11 +238,11 @@ namespace io {
 	}
 #endif
 
-    DLLIMPORT sys_mode		ios_to_sys (ios_mode);
+    SYSPP_DLLIMPORT sys_mode		ios_to_sys (ios_mode);
 
     // --- input/output functors ---------------------------------------------
 
-    class DLLIMPORT writer
+    class SYSPP_DLLIMPORT writer
     {
     public:
 	explicit writer (raw_handle handle) : m_handle (handle) { }
@@ -254,7 +254,7 @@ namespace io {
 	raw_handle		m_handle;
     };
 
-    class DLLIMPORT reader
+    class SYSPP_DLLIMPORT reader
     {
     public:
 	explicit reader (raw_handle handle) : m_handle (handle) { }

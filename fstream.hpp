@@ -45,7 +45,7 @@ namespace sys {
 // ---------------------------------------------------------------------------
 // sys::filebuf class
 
-class DLLIMPORT filebuf : public std::streambuf
+class SYSPP_DLLIMPORT filebuf : public std::streambuf
 {
 public: // types
 
@@ -218,7 +218,7 @@ protected:
 /// \brief this class implements translation of new-lines into \r\n pairs in text
 ///        stream.
 
-class DLLIMPORT text_writer
+class SYSPP_DLLIMPORT text_writer
 {
 public:
     typedef char			char_type;

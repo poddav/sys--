@@ -15,14 +15,14 @@
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #   if defined(SYSPP_BUILD_DLL)
-#	define DLLIMPORT		__declspec(dllexport)
+#	define SYSPP_DLLIMPORT		__declspec(dllexport)
 #   elif defined(SYSPP_DLL)
-#	define DLLIMPORT		__declspec(dllimport)
+#	define SYSPP_DLLIMPORT		__declspec(dllimport)
 #   else
-#	define DLLIMPORT
+#	define SYSPP_DLLIMPORT
 #   endif
 #else
-#   define DLLIMPORT
+#   define SYSPP_DLLIMPORT
 #endif
 
 #if defined(__GNUC__) /* GNU C++ */
@@ -58,9 +58,11 @@
 #if SYSPP_GNUC >= 40600 || SYSPP_IBMCPP >= 0x1201 || SYSPP_INTELC >= 1300 || SYSPP_CLANG >= 30100
 #   define SYSPP_constexpr constexpr
 #   define SYSPP_static_constexpr static constexpr
+#   define SYSPP_noexcept noexcept
 #else
 #   define SYSPP_constexpr
 #   define SYSPP_static_constexpr static const
+#   define SYSPP_noexcept throw()
 #endif
 
 #if SYSPP_GNUC >= 40600 || SYSPP_MSC >= 1600 || SYSPP_INTELC >= 1210 || SYSPP_CLANG >= 20900

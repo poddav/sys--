@@ -54,7 +54,7 @@ enum mode_t
    
 namespace detail {
 
-struct DLLIMPORT info
+struct SYSPP_DLLIMPORT info
 {
     size_t	page_size;
     info ();
@@ -75,7 +75,7 @@ template <typename T> struct nearest_int {
     typedef typename nearest_int_impl<sizeof(T) <= sizeof(boost::uint32_t)>::type type;
 };
 
-class DLLIMPORT map_impl_common : public refcount_base
+class SYSPP_DLLIMPORT map_impl_common : public refcount_base
 {
 public:
     // integer type wide enough to hold a pointer
@@ -113,7 +113,7 @@ private:
 
 #ifdef _WIN32
 
-class DLLIMPORT map_impl : public map_impl_common
+class SYSPP_DLLIMPORT map_impl : public map_impl_common
 {
 public:
     typedef DWORDLONG	off_type;
