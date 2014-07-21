@@ -5,10 +5,13 @@
 *.asm
 *.lib
 *.exe
+*.suo
+*.sdf
+*.opensdf
 *test*
 text*
-vc10
 Build
+ipch
 doc
 *~
 *;*
