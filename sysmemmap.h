@@ -38,13 +38,15 @@ namespace sys { namespace mapping {
 typedef detail::map_impl::off_type	off_type;
 typedef detail::map_impl::size_type	size_type;
 
+inline size_type page_size () { return detail::map_impl::page_size(); }
+
 /// \class sys::mapping::map_base
 ///
 /// base class for memory mapped object.
 /// map_base maintains reference counted implementation of mapped object.
 /// mapped object is destroyed when there's no views on top of it.
 
-class DLLIMPORT map_base
+class SYSPP_DLLIMPORT map_base
 {
     refcount_ptr<detail::map_impl>	impl;
 
@@ -113,18 +115,22 @@ protected:
     map_base (sys::raw_handle handle, mode_t mode, off_type size = 0) : impl()
 	{ open (handle, mode, size); }
 
+    map_base (const map_base& other) : impl (other.impl)
+        { }
+
     ~map_base () { }
+
+    map_base& operator= (const map_base& other)
+        {
+            impl = other.impl;
+            return *this;
+        }
 
     template <typename CharT>
     void open (const CharT* filename, mode_t mode, off_type size = 0);
     void open (sys::raw_handle handle, mode_t mode, off_type size = 0);
 
 private:
-    /// map_base object cannot be copied
-
-    map_base (const map_base&);		// not defined
-    map_base& operator= (const map_base&);
-
     /// open_mode (MODE)
     ///
     /// Returns: system-dependent file open mode corresponding to specified map access
@@ -236,15 +242,39 @@ protected:
 
     explicit view (map_base& mf, off_type offset = 0, size_type n = 0)
 	: map (mf.impl), area (0)
-	{ remap (offset, n); }
+	{ do_remap (offset, n); }
+
+    view (view&& other)
+        : map (other.map), area (other.area), msize (other.msize)
+        { other.area = 0; }
+
+    template <typename U>
+    view (const view<U>& other, off_type offset, size_type n)
+        : map (other.map), area (0)
+        { do_remap (offset, n); }
 
     view () : map (0), area (0) { }
 
     ~view () { if (area) map->unmap ((void*)area, msize*sizeof(T)); }
 
+    template <typename U> friend class view;
+
 public:
+    bool is_bound () const { return map; }
     T* get () const { return area; }
+    T* data () const { return area; }
     size_type size () const { return msize; }
+
+    view& operator= (view&& other)
+        {
+            if (area && area != other.area)
+                map->unmap ((void*)area, msize*sizeof(T));
+            map = other.map;
+            area = other.area;
+            msize = other.msize;
+            other.area = 0;
+            return *this;
+        }
 
     T* operator-> () const { return area; }
     T& operator* () const { return *area; }
@@ -255,26 +285,40 @@ public:
 
     bool sync () { return area? map->sync (area, msize*sizeof(T)): false; }
 
-    void remap (map_base& mf, off_type offset = 0, size_type n = 0)
+    void bind (const map_base& mf)
+        {
+            unmap();
+            map = mf.impl;
+        }
+    template <typename U>
+    void bind (const view<U>& other)
+        {
+            unmap();
+            map = other.map;
+        }
+    void remap (const map_base& mf, off_type offset = 0, size_type n = 0)
 	{
-	    unmap();
-	    map = mf.impl;
-	    remap (offset, n);
+            bind (mf);
+	    do_remap (offset, n);
 	}
+    void remap (off_type offset, size_type n)
+        {
+            unmap();
+            do_remap (offset, n);
+        }
     void unmap ()
 	{
 	    if (area)
 	    {
 		map->unmap ((void*)area, msize*sizeof(T));
 		area = 0;
-		map.reset();
 	    }
 	}
 
     off_type max_offset () const { return map->get_size(); }
-    
+
 private:
-    void remap (off_type offset, size_type n);
+    void do_remap (off_type offset, size_type n);
 
     refcount_ptr<detail::map_impl>	map;
     T*		area;	// pointer to the beginning of view address space
@@ -282,19 +326,6 @@ private:
 
     view (const view&);			// not defined
     view& operator= (const view&);	//
-};
-
-template <class T>
-class const_view : public map_base::view<const T>
-{
-public:
-    typedef map_base::off_type	off_type;
-    typedef map_base::size_type	size_type;
-
-    const_view () : map_base::view<const T>() { }
-    explicit const_view (map_base& map, off_type offset = 0, size_type n = 0)
-	: map_base::view<const T> (map, offset, n)
-	{ }
 };
 
 template <class T>
@@ -308,6 +339,32 @@ public:
     explicit view (readwrite& rwm, off_type offset = 0, size_type n = 0)
 	: map_base::view<T> (rwm, offset, n)
 	{ }
+    view (view&& other) : map_base::view<T> (std::move (other)) { }
+
+    template <typename U>
+    view (const view<U>& other, off_type offset, size_type n)
+        : map_base::view<T> (other, offset, n)
+        { }
+};
+
+template <class T>
+class const_view : public map_base::view<const T>
+{
+public:
+    typedef map_base::off_type	off_type;
+    typedef map_base::size_type	size_type;
+
+    const_view () : map_base::view<const T>() { }
+    explicit const_view (map_base& map, off_type offset = 0, size_type n = 0)
+	: map_base::view<const T> (map, offset, n)
+	{ }
+    const_view (const_view&& other) : map_base::view<const T> (std::move (other)) { }
+    const_view (map_base::view<T>&& other) : map_base::view<const T> (std::move (other)) { }
+
+    template <typename U>
+    const_view (const map_base::view<U>& other, off_type offset, size_type n)
+        : map_base::view<const T> (other, offset, n)
+        { }
 };
 
 // --- template methods implementation ---------------------------------------
@@ -316,33 +373,34 @@ template <typename CharT> inline void map_base::
 open (const CharT* filename, mode_t mode, off_type size)
 {
     // this handle automatically closes itself on function exit
-    sys::file_handle handle (sys::create_file (filename, open_mode (mode), io::share_read));
-    if (!handle) throw file_error (filename);
+    sys::file_handle handle (sys::create_file (filename, open_mode (mode), io::share_default));
+    if (!handle) SYS_THROW_FILE_ERROR (filename);
     try {
 	open (handle, mode, size);
     }
-    catch (generic_error&)
+    catch (generic_error& X)
     {
-	throw file_error (filename);
+	throw file_error (X.get_error_code(), filename);
     }
 }
 
 template <class T> void map_base::view<T>::
-remap (off_type offset, size_type n)
+do_remap (off_type offset, size_type n)
 {
-    assert (area == 0);
+    assert (0 == area);
 
     if (!map)
 	throw std::invalid_argument ("map_base::view: taking view of an uninitialized map");
-    if (off_type(offset+sizeof(T)) > map->get_size())
+    const auto map_size = map->get_size();
+    if (sizeof(T) > map_size || offset > map_size-sizeof(T))
 	throw std::range_error ("map_base::view: offset exceedes map size");
 
     size_type byte_size = n*sizeof(T);
-    if (n == 0 || offset+off_type(byte_size) > map->get_size())
-	byte_size = map->get_size() - offset;
+    if (!byte_size || off_type (byte_size) > map_size || offset > map_size-byte_size)
+	byte_size = map_size - offset;
 
     void* v = map->map (offset, byte_size);
-    if (!v) throw sys::generic_error();
+    if (!v) SYS_THROW_SYSTEM_ERROR();
     area = static_cast<T*> (v);
     msize = byte_size / sizeof(T);
 }
@@ -355,7 +413,7 @@ remap (off_type offset, size_type n)
 /// write to readonly mapped objects.  better use sys::mapping::readwrite,
 /// sys::mapping::readonly and desired view classes upon them instead.
 
-class DLLIMPORT mapped_file : public mapping::map_base
+class SYSPP_DLLIMPORT mapped_file : public mapping::map_base
 {
 public:
     mapped_file () { }
@@ -379,7 +437,7 @@ public:
 };
 
 template <class T>
-class DLLIMPORT mapped_file::view : public mapping::map_base::view<T>
+class SYSPP_DLLIMPORT mapped_file::view : public mapping::map_base::view<T>
 {
 public:
     typedef mapping::map_base::off_type		off_type;
